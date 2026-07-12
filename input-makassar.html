@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Input Kinerja Harian - MAKASSAR</title>
+<style>
+  :root{
+    --navy:#1c2733;
+    --card:#ffffff;
+    --bg:#eef1f5;
+    --blue:#5b7fa6;
+    --blue-dark:#3b5a7d;
+    --green:#3fae63;
+    --red:#e05a4e;
+    --gray:#9aa5b1;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--navy); min-height:100vh;
+  }
+  .topbar{
+    background:var(--navy); color:#fff; padding:16px 20px 40px;
+    font-size:13px; letter-spacing:.3px;
+  }
+  .topbar .nama{font-size:20px; font-weight:700; margin-bottom:2px;}
+  .topbar .sub{opacity:.7;}
+  .wrap{max-width:480px; margin:-26px auto 0; padding:0 16px 100px;}
+  .card{
+    background:var(--card); border-radius:var(--radius); padding:18px 18px 20px;
+    margin-bottom:14px; box-shadow:0 6px 18px rgba(20,30,45,.08);
+  }
+  .card h3{
+    margin:0 0 14px; font-size:12px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--blue-dark); font-weight:700;
+  }
+  label{display:block; font-size:13px; color:#5b6672; margin-bottom:6px;}
+  input[type=date]{
+    width:100%; padding:14px 12px; border-radius:12px; border:1.5px solid #dde2e8;
+    font-size:16px; background:#fbfcfd; color:var(--navy); font-weight:600;
+  }
+  input[type=date]:focus{outline:none; border-color:var(--blue);}
+  .item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 0; border-bottom:1px solid #eef0f3;
+  }
+  .item:last-child{border-bottom:none;}
+  .item .txt{font-size:14px; padding-right:12px; line-height:1.35;}
+  .item .num{
+    display:inline-block; width:20px; height:20px; border-radius:50%; background:#eef1f5;
+    color:var(--blue-dark); font-size:11px; font-weight:700; text-align:center; line-height:20px;
+    margin-right:8px;
+  }
+  .switch{ position:relative; width:46px; height:27px; flex:0 0 auto; }
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{
+    position:absolute; cursor:pointer; inset:0; background:#d7dce2; border-radius:27px;
+    transition:.2s;
+  }
+  .slider:before{
+    content:""; position:absolute; height:21px; width:21px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+  }
+  input:checked + .slider{background:var(--blue);}
+  input:checked + .slider:before{transform:translateX(19px);}
+  .submitbar{
+    position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
+    background:linear-gradient(to top, var(--bg) 60%, transparent);
+  }
+  button.submit{
+    max-width:448px; margin:0 auto; display:block; width:100%;
+    background:var(--navy); color:#fff; border:none; border-radius:14px;
+    padding:16px; font-size:15px; font-weight:700; letter-spacing:.3px;
+  }
+  button.submit:active{background:var(--blue-dark);}
+  button.submit:disabled{background:#aab3bd;}
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px;
+    font-size:13px; z-index:50; box-shadow:0 6px 16px rgba(0,0,0,.2); max-width:90%; text-align:center;
+    opacity:0; transition:.25s;
+  }
+  .toast.show{opacity:1;}
+  .toast.err{background:var(--red);}
+  .toast.okc{background:var(--green);}
+
+  .teamrow{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f2f4f7; font-size:13px; }
+  .teamrow:last-child{ border-bottom:none; }
+  .teamrow .who{ color:#5b6672; }
+  .badge{ font-size:10px; font-weight:700; padding:3px 8px; border-radius:10px; }
+  .badge.ok{ background:#e4f6ea; color:var(--green); }
+  .badge.no{ background:#fdecea; color:var(--red); }
+  .badge.no-data{ background:#eef1f5; color:var(--gray); }
+  .teamlegend{ display:flex; justify-content:space-between; font-size:10px; color:var(--gray); padding:2px 0 6px; }
+  .wa-share-btn{
+    width:100%; margin-top:12px; padding:11px; border-radius:12px; border:none;
+    background:#25D366; color:#fff; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .wa-share-btn:active{ background:#1ea952; }
+  .wa-share-btn:disabled{ background:#a9d9bd; cursor:default; }
+  .wa-hint{ font-size:11px; color:var(--gray); text-align:center; margin-top:6px; }
+  #team-content{ transition:opacity .18s ease; }
+  #team-content.loading-fade{ opacity:.35; }
+  .teamsummary{ display:flex; gap:10px; margin-bottom:10px; }
+  .teamsummary .box{ flex:1; background:#f6f8fa; border-radius:12px; padding:10px 12px; text-align:center; }
+  .teamsummary .box .lbl{ font-size:10px; color:var(--gray); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+  .teamsummary .box .val{ font-size:13px; font-weight:700; }
+</style>
+<link rel="manifest" href="manifest-makassar.json">
+<meta name="theme-color" content="#3b5a7d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MAKASSAR">
+<link rel="apple-touch-icon" href="icon-makassar-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-makassar-192.png">
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyZjdcOqCzQZ3i54Y2pAZVfbnMfuaEHmPFOaMhlpPqBgD958CWKTN5iujN4lPOkvJ43/exec";
+var NAMA = "MAKASSAR";
+var MARKETING_TEAM = ["ASTRID","ADI","REZA","PUTRI"];
+var LOGISTIK_TEAM = ["BURHAMIN","ZUL","ASPAR","TAUFIK"];
+
+var app = document.getElementById("app");
+
+function todayStr(){
+  var d = new Date();
+  var tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tz.toISOString().slice(0,10);
+}
+
+function showToast(msg, type){
+  var t = document.createElement("div");
+  t.className = "toast" + (type ? " " + type : "");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ t.classList.add("show"); });
+  setTimeout(function(){
+    t.classList.remove("show");
+    setTimeout(function(){ t.remove(); }, 300);
+  }, 2600);
+}
+
+function loadForm(){
+  app.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#9aa5b1;font-size:14px;">Memuat data MAKASSAR...</div>';
+  fetch(WEBAPP_URL + "?action=config&nama=" + encodeURIComponent(NAMA))
+    .then(function(r){ return r.json(); })
+    .then(function(cfg){
+      if (cfg.error){ showToast("Gagal memuat konfigurasi", "err"); return; }
+      renderForm(cfg.labels);
+    })
+    .catch(function(){
+      showToast("Tidak bisa terhubung ke server", "err");
+    });
+}
+
+// labels index: 0 Target Sales, 1 Target Revenue, 2 Target Invoice, 3 Delivery,
+// 4 Absen Datang Marketing (auto), 5 Absen Pulang Marketing (auto),
+// 6 Absen Datang Logistik (auto), 7 Absen Pulang Logistik (auto),
+// 8 Kelengkapan Team, 9 Report Harian
+var MANUAL_IDX = [0,1,2,3,8,9];
+
+function renderForm(labels){
+  var html = ''
+  + '<div class="topbar">'
+  +   '<div class="nama">MAKASSAR</div>'
+  +   '<div class="sub">Rekap Cabang &mdash; PT. Mitra Kabel Indonesia, Makassar</div>'
+  + '</div>'
+  + '<div class="wrap">'
+
+  +   '<div class="card">'
+  +     '<h3>Tanggal</h3>'
+  +     '<label>Pilih tanggal</label>'
+  +     '<input type="date" id="f-tanggal" value="' + todayStr() + '">'
+  +   '</div>'
+
+  +   '<div class="card" id="team-card">'
+  +     '<h3>Absensi Tim (otomatis)</h3>'
+  +     '<div id="team-content" style="font-size:13px;color:#9aa5b1;">Memuat status tim...</div>'
+  +     '<button type="button" class="wa-share-btn" id="btn-wa-share" style="display:none" disabled>Bagikan ke WhatsApp</button>'
+  +     '<div id="wa-hint" class="wa-hint" style="display:none">Simpan kinerja hari ini dulu sebelum bisa dibagikan</div>'
+  +   '</div>'
+
+  +   '<div class="card">'
+  +     '<h3>Checklist Kinerja Cabang</h3>'
+  +     MANUAL_IDX.map(function(idx, i){
+          return '<div class="item">'
+            + '<div class="txt"><span class="num">' + (i+1) + '</span>' + labels[idx] + '</div>'
+            + '<label class="switch"><input type="checkbox" class="chk-manual" data-src="' + idx + '"><span class="slider"></span></label>'
+            + '</div>';
+        }).join("")
+  +   '</div>'
+  + '</div>'
+  + '<div class="submitbar"><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
+
+  app.innerHTML = html;
+
+  var elTanggal = document.getElementById("f-tanggal");
+  var lastTeamStatus = null;
+  var lastDayStatus = null;
+  var reportBlob = null;
+  var reqToken = 0;
+
+  function jamBadge(jam, onTime){
+    if (!jam) return '<span class="badge no-data">-</span>';
+    var cls = onTime ? 'ok' : 'no';
+    return '<span class="badge ' + cls + '">' + jam + '</span>';
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function buildReportImage(tanggalStr, teamStatus, dayStatus){
+    return new Promise(function(resolve){
+      var tgl = tanggalStr.split("-").reverse().join("/");
+      var scale = 2;
+      var W = 720;
+      var padX = 28;
+      var rowH = 42;
+      var peopleAll = MARKETING_TEAM.concat(LOGISTIK_TEAM);
+      var headerH = 118;
+      var sectionTitleH = 40;
+      var sectionGap = 20;
+      var attendanceH = sectionTitleH + peopleAll.length*rowH + 10;
+      var checklistH = sectionTitleH + MANUAL_IDX.length*rowH + 10;
+      var footerH = 36;
+      var H = headerH + 24 + attendanceH + sectionGap + checklistH + footerH;
+
+      var canvas = document.createElement("canvas");
+      canvas.width = W*scale; canvas.height = H*scale;
+      var ctx = canvas.getContext("2d");
+      ctx.scale(scale, scale);
+
+      ctx.fillStyle = "#eef1f5";
+      ctx.fillRect(0,0,W,H);
+
+      ctx.fillStyle = "#1c2733";
+      ctx.fillRect(0,0,W,headerH);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 21px -apple-system, Roboto, Arial, sans-serif";
+      ctx.fillText("Report Absensi & Kinerja Cabang", padX, 44);
+      ctx.font = "400 13px -apple-system, Roboto, Arial, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.75)";
+      ctx.fillText("PT. Mitra Kabel Indonesia — Cabang Makassar", padX, 66);
+      ctx.font = "700 15px -apple-system, Roboto, Arial, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(tgl, padX, 96);
+
+      var y = headerH + 24;
+
+      ctx.fillStyle = "#3b5a7d";
+      ctx.font = "700 13px -apple-system, Roboto, Arial, sans-serif";
+      ctx.fillText("ABSENSI TIM", padX, y);
+      y += sectionTitleH;
+
+      function jamColor(ok, jam){
+        if (!jam) return "#9aa5b1";
+        return ok ? "#3fae63" : "#e05a4e";
+      }
+
+      peopleAll.forEach(function(n){
+        var team = MARKETING_TEAM.indexOf(n) !== -1 ? teamStatus.marketing : teamStatus.logistik;
+        var d = team[n] || {datang:false,pulang:false,jamDatang:"",jamPulang:""};
+
+        ctx.fillStyle = "#ffffff";
+        roundRect(ctx, padX-8, y-26, W-2*(padX-8), rowH-8, 10);
+        ctx.fill();
+
+        ctx.fillStyle = "#1c2733";
+        ctx.font = "600 14px -apple-system, Roboto, Arial, sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText(n, padX+8, y-4);
+
+        ctx.font = "700 13px -apple-system, Roboto, Arial, sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillStyle = jamColor(d.pulang, d.jamPulang);
+        ctx.fillText(d.jamPulang || "-", W-padX, y-4);
+        ctx.fillStyle = jamColor(d.datang, d.jamDatang);
+        ctx.fillText(d.jamDatang || "-", W-padX-100, y-4);
+        ctx.textAlign = "left";
+
+        y += rowH;
+      });
+
+      y += sectionGap;
+
+      ctx.fillStyle = "#3b5a7d";
+      ctx.font = "700 13px -apple-system, Roboto, Arial, sans-serif";
+      ctx.fillText("CHECKLIST KINERJA CABANG", padX, y);
+      y += sectionTitleH;
+
+      MANUAL_IDX.forEach(function(idx, i){
+        var v = dayStatus && dayStatus.values ? dayStatus.values[idx] : false;
+
+        ctx.fillStyle = "#ffffff";
+        roundRect(ctx, padX-8, y-26, W-2*(padX-8), rowH-8, 10);
+        ctx.fill();
+
+        ctx.fillStyle = "#1c2733";
+        ctx.font = "600 13px -apple-system, Roboto, Arial, sans-serif";
+        ctx.textAlign = "left";
+        var lbl = labels[idx] || "";
+        var maxWidth = W - 2*padX - 100;
+        var text = lbl;
+        while (ctx.measureText((i+1) + ". " + text).width > maxWidth && text.length > 3) {
+          text = text.slice(0, -2);
+        }
+        if (text !== lbl) text += "…";
+        ctx.fillText((i+1) + ". " + text, padX+8, y-4);
+
+        ctx.textAlign = "right";
+        ctx.font = "700 13px -apple-system, Roboto, Arial, sans-serif";
+        ctx.fillStyle = v ? "#3fae63" : "#e05a4e";
+        ctx.fillText(v ? "YA" : "TIDAK", W-padX, y-4);
+        ctx.textAlign = "left";
+
+        y += rowH;
+      });
+
+      ctx.fillStyle = "#9aa5b1";
+      ctx.font = "400 11px -apple-system, Roboto, Arial, sans-serif";
+      ctx.fillText("Dibuat otomatis dari sistem KPI Cabang Makassar", padX, H-14);
+
+      canvas.toBlob(function(blob){ resolve(blob); }, "image/png", 0.95);
+    });
+  }
+
+  function maybeBuildReport(){
+    var waBtn = document.getElementById("btn-wa-share");
+    var waHint = document.getElementById("wa-hint");
+    if (!lastTeamStatus || !lastDayStatus) return;
+    buildReportImage(elTanggal.value, lastTeamStatus, lastDayStatus).then(function(blob){
+      reportBlob = blob;
+      var isSubmitted = !!lastDayStatus.submitted;
+      waBtn.disabled = !isSubmitted;
+      if (waHint) waHint.style.display = isSubmitted ? "none" : "block";
+    });
+  }
+
+  function setSubmitButtonState(submitted){
+    var btn = document.getElementById("btn-submit");
+    if (submitted) {
+      btn.disabled = true;
+      btn.textContent = "Tersimpan ✓ Kinerja Hari Ini";
+    } else {
+      btn.disabled = false;
+      btn.textContent = "Simpan Kinerja Hari Ini";
+    }
+  }
+
+  function loadDayStatusForReport(myToken){
+    fetch(WEBAPP_URL + "?action=dayStatus&nama=MAKASSAR&tanggal=" + elTanggal.value)
+      .then(function(r){ return r.json(); })
+      .then(function(ds){
+        if (myToken !== reqToken) return;
+        lastDayStatus = ds;
+        setSubmitButtonState(!!ds.submitted);
+        maybeBuildReport();
+      })
+      .catch(function(){});
+  }
+
+  function loadTeamStatus(myToken){
+    var teamContent = document.getElementById("team-content");
+    var waBtn = document.getElementById("btn-wa-share");
+    waBtn.disabled = true;
+    teamContent.classList.add("loading-fade");
+    fetch(WEBAPP_URL + "?action=teamStatus&tanggal=" + elTanggal.value)
+      .then(function(r){ return r.json(); })
+      .then(function(st){
+        if (myToken !== reqToken) return;
+        if (st.error){ teamContent.textContent = "Gagal memuat status tim."; teamContent.classList.remove("loading-fade"); return; }
+        lastTeamStatus = st;
+        function personRows(team, data){
+          return team.map(function(n){
+            var d = data[n] || {datang:false, pulang:false, jamDatang:'', jamPulang:''};
+            return '<div class="teamrow"><span class="who">' + n + '</span>'
+              + '<span>' + jamBadge(d.jamDatang, d.datang) + ' ' + jamBadge(d.jamPulang, d.pulang) + '</span></div>';
+          }).join("");
+        }
+        teamContent.innerHTML = ''
+          + '<div class="teamsummary">'
+          +   '<div class="box"><div class="lbl">Marketing</div><div class="val">' + (st.marketingDatangOk && st.marketingPulangOk ? "Lengkap" : "Belum lengkap") + '</div></div>'
+          +   '<div class="box"><div class="lbl">Logistik</div><div class="val">' + (st.logistikDatangOk && st.logistikPulangOk ? "Lengkap" : "Belum lengkap") + '</div></div>'
+          + '</div>'
+          + '<div class="teamlegend"><span></span><span>Datang &nbsp;&nbsp; Pulang</span></div>'
+          + personRows(MARKETING_TEAM, st.marketing)
+          + '<div style="height:8px"></div>'
+          + personRows(LOGISTIK_TEAM, st.logistik);
+        teamContent.classList.remove("loading-fade");
+        waBtn.style.display = "block";
+        maybeBuildReport();
+      })
+      .catch(function(){
+        if (myToken !== reqToken) return;
+        teamContent.textContent = "Tidak bisa memuat status tim.";
+        teamContent.classList.remove("loading-fade");
+      });
+  }
+  elTanggal.addEventListener("change", function(){
+    reqToken++;
+    var myToken = reqToken;
+    loadTeamStatus(myToken);
+    loadDayStatusForReport(myToken);
+  });
+  loadTeamStatus(reqToken);
+  loadDayStatusForReport(reqToken);
+
+  document.getElementById("btn-wa-share").addEventListener("click", async function(){
+    if (!lastDayStatus || !lastDayStatus.submitted) {
+      showToast('Simpan "Kinerja Hari Ini" dulu sebelum bisa dibagikan ke WhatsApp', "err");
+      return;
+    }
+    if (!reportBlob) { showToast("Gambar belum siap, coba lagi sesaat lagi", "err"); return; }
+    var tgl = elTanggal.value.split("-").reverse().join("/");
+    var caption = "Report Absensi dan Kinerja Cabang Tanggal " + tgl;
+    var fileName = "report-kinerja-" + elTanggal.value + ".png";
+    var file = new File([reportBlob], fileName, { type: "image/png" });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: caption });
+      } catch (e) {
+        // user membatalkan share, tidak perlu toast error
+      }
+    } else {
+      var url = URL.createObjectURL(reportBlob);
+      var a = document.createElement("a");
+      a.href = url; a.download = fileName;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+      showToast("Browser ini tidak mendukung share langsung — gambar sudah diunduh, silakan lampirkan manual ke WhatsApp", "err");
+    }
+  });
+
+  document.getElementById("btn-submit").addEventListener("click", function(){
+    var btn = this;
+    var tanggal = elTanggal.value;
+    if (!tanggal){ showToast("Pilih tanggal dulu", "err"); return; }
+    if (btn.disabled) return; // jaga-jaga terhadap klik ganda yang sangat cepat
+
+    var checklist = MANUAL_IDX.map(function(idx){
+      var el = document.querySelector('.chk-manual[data-src="' + idx + '"]');
+      return el ? el.checked : false;
+    });
+
+    btn.disabled = true;
+    btn.textContent = "Menyimpan...";
+
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({ nama: "MAKASSAR", tanggal: tanggal, checklist: checklist })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res.ok){
+        showToast("Tersimpan ke Google Sheet ✓", "okc");
+        setSubmitButtonState(true);
+        if (lastDayStatus) lastDayStatus.submitted = true;
+        maybeBuildReport();
+      } else {
+        setSubmitButtonState(false);
+        showToast(res.error || "Gagal menyimpan", "err");
+      }
+    })
+    .catch(function(){
+      setSubmitButtonState(false);
+      showToast("Tidak bisa terhubung ke server", "err");
+    });
+  });
+}
+
+loadForm();
+</script>
+</body>
+</html>

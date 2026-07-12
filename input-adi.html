@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Input Kinerja Harian - ADI</title>
+<style>
+  :root{
+    --navy:#1c2733;
+    --card:#ffffff;
+    --bg:#eef1f5;
+    --blue:#5b7fa6;
+    --blue-dark:#3b5a7d;
+    --green:#3fae63;
+    --red:#e05a4e;
+    --gray:#9aa5b1;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--navy); min-height:100vh;
+  }
+  .topbar{
+    background:var(--navy); color:#fff; padding:16px 20px 40px;
+    font-size:13px; letter-spacing:.3px;
+  }
+  .topbar .nama{font-size:19px; font-weight:700; margin-bottom:2px;}
+  .topbar .jabatan{font-size:12px; opacity:.85; margin-bottom:4px;}
+  .topbar .sub{opacity:.6; font-size:11px;}
+  .wrap{max-width:480px; margin:-26px auto 0; padding:0 16px 100px;}
+  .card{
+    background:var(--card); border-radius:var(--radius); padding:18px 18px 20px;
+    margin-bottom:14px; box-shadow:0 6px 18px rgba(20,30,45,.08);
+  }
+  .card h3{
+    margin:0 0 14px; font-size:12px; letter-spacing:1px; text-transform:uppercase;
+    color:var(--blue-dark); font-weight:700;
+  }
+  label{display:block; font-size:13px; color:#5b6672; margin-bottom:6px;}
+  input[type=date], input[type=text].jam{
+    width:100%; padding:14px 12px; border-radius:12px; border:1.5px solid #dde2e8;
+    font-size:16px; background:#fbfcfd; color:var(--navy); font-weight:600;
+  }
+  input[type=text].jam{ text-align:center; letter-spacing:1px; }
+  input:disabled, select:disabled{ opacity:.6; }
+  input[type=date]:focus, input[type=text].jam:focus{outline:none; border-color:var(--blue);}
+  .row2{display:flex; gap:12px;}
+  .row2 > div{flex:1;}
+  .status-pill{
+    display:inline-block; margin-top:8px; font-size:11px; font-weight:700;
+    padding:4px 10px; border-radius:20px; letter-spacing:.3px;
+  }
+  .ok{background:#e4f6ea; color:var(--green);}
+  .no{background:#fdecea; color:var(--red);}
+  .item{
+    padding:12px 0; border-bottom:1px solid #eef0f3;
+  }
+  .item:last-child{border-bottom:none;}
+  .item-row{ display:flex; align-items:center; justify-content:space-between; }
+  .item .txt{font-size:14px; padding-right:12px; line-height:1.35;}
+  .item .num{
+    display:inline-block; width:20px; height:20px; border-radius:50%; background:#eef1f5;
+    color:var(--blue-dark); font-size:11px; font-weight:700; text-align:center; line-height:20px;
+    margin-right:8px;
+  }
+  .switch{ position:relative; width:46px; height:27px; flex:0 0 auto; }
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{
+    position:absolute; cursor:pointer; inset:0; background:#d7dce2; border-radius:27px;
+    transition:.2s;
+  }
+  .slider:before{
+    content:""; position:absolute; height:21px; width:21px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+  }
+  input:checked + .slider{background:var(--blue);}
+  input:checked + .slider:before{transform:translateX(19px);}
+  .switch.locked .slider{opacity:.55; cursor:not-allowed;}
+  .hint{font-size:11px; color:var(--gray); margin-top:2px;}
+
+  .fields-wrap{ margin-top:10px; display:none; border-top:1px dashed #e6e9ee; padding-top:10px; }
+  .fields-wrap.show{ display:block; }
+  .row-card{ margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed #eef0f3; }
+  .row-card:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .row-label{ font-size:10px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.4px; margin-bottom:8px; }
+  .field-item{ margin-bottom:10px; }
+  .field-item:last-child{ margin-bottom:0; }
+  .field-label{ font-size:11px; color:var(--blue-dark); font-weight:700; margin-bottom:5px; display:flex; align-items:center; gap:4px; }
+  .field-label .req{ color:var(--red); }
+  .field-item input[type=text], .field-item select{
+    width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid #dde2e8;
+    font-size:13px; font-family:inherit; background:#fbfcfd; color:var(--navy);
+  }
+  .field-item input[type=text]:focus, .field-item select:focus{ outline:none; border-color:var(--blue); }
+  .field-item input.err, .field-item select.err{ border-color:var(--red); }
+  .remove-row-btn{
+    background:none; border:none; color:var(--red); font-size:11.5px; font-weight:700;
+    padding:2px 0; cursor:pointer;
+  }
+  .add-row-btn{
+    width:100%; margin-top:4px; padding:10px; border-radius:10px; border:1.5px dashed var(--blue);
+    background:#f4f7fa; color:var(--blue-dark); font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .add-row-btn:active{ background:#e9eef3; }
+  .evidence-view{
+    margin-top:8px; font-size:12.5px; color:#4a5560; background:#f6f8fa; border-radius:10px;
+    padding:9px 12px; line-height:1.5;
+  }
+  .evidence-view + .evidence-view{ margin-top:6px; }
+  .evidence-view .ev-title{ font-weight:700; font-size:11px; color:var(--blue-dark); margin-bottom:4px; }
+  .evidence-view .ev-row{ display:flex; justify-content:space-between; gap:10px; }
+  .evidence-view .ev-row:not(:last-child){ margin-bottom:3px; }
+  .evidence-view .ev-k{ color:#8b94a0; }
+  .evidence-view .ev-v{ font-weight:600; text-align:right; }
+
+  .submitbar{
+    position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
+    background:linear-gradient(to top, var(--bg) 60%, transparent);
+  }
+  button.submit{
+    max-width:448px; margin:0 auto; display:block; width:100%;
+    background:var(--navy); color:#fff; border:none; border-radius:14px;
+    padding:16px; font-size:15px; font-weight:700; letter-spacing:.3px;
+  }
+  button.submit:active{background:var(--blue-dark);}
+  button.submit:disabled{background:#aab3bd;}
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px;
+    font-size:13px; z-index:50; box-shadow:0 6px 16px rgba(0,0,0,.2); max-width:90%; text-align:center;
+    opacity:0; transition:.25s;
+  }
+  .toast.show{opacity:1;}
+  .toast.err{background:var(--red);}
+  .toast.okc{background:var(--green);}
+  .locked-banner{
+    background:#fff3e0; color:#a05a00; font-size:12px; font-weight:600; border-radius:12px;
+    padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; gap:8px;
+  }
+  .badge-static{ font-size:12px; font-weight:700; padding:4px 10px; border-radius:20px; }
+  .badge-static.on{ background:#e4f6ea; color:var(--green); }
+  .badge-static.off{ background:#fdecea; color:var(--red); }  #dynamic-area{ animation: fadeInArea .18s ease; }
+  @keyframes fadeInArea{ from{ opacity:.3; } to{ opacity:1; } }
+</style>
+<link rel="manifest" href="manifest-adi.json">
+<meta name="theme-color" content="#1c2733">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ADI">
+<link rel="apple-touch-icon" href="icon-adi-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-adi-192.png">
+</head>
+<body>
+
+<div id="app"></div>
+
+<script>
+var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyZjdcOqCzQZ3i54Y2pAZVfbnMfuaEHmPFOaMhlpPqBgD958CWKTN5iujN4lPOkvJ43/exec";
+var NAMA = "ADI";
+var BATAS_DATANG = "08:15";
+var BATAS_PULANG = "16:45";
+
+// manualIndex 0..7 = indikator item 3..10 (labels[2..9])
+var EXTRA_FIELDS = {"0": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}};
+var AUTO_LOCKED = [];
+var SKIP_EVIDENCE = false;
+var SHARED_PEER_IDX = []; // array of manualIndex yang nilainya bisa datang dari peer
+
+var app = document.getElementById("app");
+var cfgCache = null;
+
+function todayStr(){
+  var d = new Date();
+  var tz = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return tz.toISOString().slice(0,10);
+}
+
+function showToast(msg, type){
+  var t = document.createElement("div");
+  t.className = "toast" + (type ? " " + type : "");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ t.classList.add("show"); });
+  setTimeout(function(){
+    t.classList.remove("show");
+    setTimeout(function(){ t.remove(); }, 300);
+  }, 2600);
+}
+
+function formatJamInput(el){
+  el.addEventListener("input", function(){
+    var v = el.value.replace(/[^0-9]/g, "").slice(0,4);
+    if (v.length >= 3) v = v.slice(0,2) + ":" + v.slice(2);
+    el.value = v;
+  });
+}
+
+function isValidJam(v){
+  return /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
+}
+
+function formatRupiah(raw){
+  var digits = String(raw).replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  digits = digits.replace(/^0+(?=\d)/, "");
+  var withSep = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return "Rp " + withSep;
+}
+
+function loadForm(){
+  app.innerHTML = '<div style="text-align:center;padding:60px 20px;color:#9aa5b1;font-size:14px;">Memuat data ' + NAMA + '...</div>';
+  var today = todayStr();
+  var configPromise = fetch(WEBAPP_URL + "?action=config&nama=" + encodeURIComponent(NAMA)).then(function(r){ return r.json(); });
+  var dayPromise = fetch(WEBAPP_URL + "?action=dayStatus&nama=" + encodeURIComponent(NAMA) + "&tanggal=" + today).then(function(r){ return r.json(); });
+
+  configPromise.then(function(cfg){
+    if (cfg.error){ showToast("Gagal memuat konfigurasi", "err"); return; }
+    cfgCache = cfg;
+    renderShell(cfg);
+    dayPromise.then(function(status){
+      DAY_CACHE[today] = status;
+      renderDynamic(today, status);
+    }).catch(function(){
+      showToast("Tidak bisa memuat data tanggal ini", "err");
+    });
+  }).catch(function(){
+    showToast("Tidak bisa terhubung ke server", "err");
+  });
+}
+
+function renderShell(cfg){
+  var displayName = (cfg.fullName && cfg.fullName.trim()) ? cfg.fullName : NAMA;
+  var jabatan = cfg.jabatan || "";
+
+  var html = ''
+  + '<div class="topbar">'
+  +   '<div class="nama">' + displayName + '</div>'
+  +   (jabatan ? '<div class="jabatan">' + jabatan + '</div>' : '')
+  +   '<div class="sub">PT. Mitra Kabel Indonesia &mdash; Cabang Makassar</div>'
+  + '</div>'
+  + '<div class="wrap">'
+  +   '<div class="card">'
+  +     '<h3>Tanggal</h3>'
+  +     '<label>Pilih tanggal</label>'
+  +     '<input type="date" id="f-tanggal" value="' + todayStr() + '" max="' + todayStr() + '">'
+  +   '</div>'
+  +   '<div id="dynamic-area"></div>'
+  + '</div>'
+  + '<div class="submitbar"><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
+
+  app.innerHTML = html;
+  document.getElementById("f-tanggal").addEventListener("change", function(){
+    loadDay(this.value);
+  });
+}
+
+var DAY_CACHE = {};
+
+function loadDay(tanggal, force){
+  var area = document.getElementById("dynamic-area");
+  if (!force && DAY_CACHE[tanggal]) {
+    renderDynamic(tanggal, DAY_CACHE[tanggal]);
+    fetchDay(tanggal, true);
+    return;
+  }
+  area.innerHTML = '<div style="text-align:center;padding:30px 0;color:#9aa5b1;font-size:13px;">Memuat...</div>';
+  fetchDay(tanggal, false);
+}
+
+function fetchDay(tanggal, silent){
+  fetch(WEBAPP_URL + "?action=dayStatus&nama=" + encodeURIComponent(NAMA) + "&tanggal=" + tanggal)
+    .then(function(r){ return r.json(); })
+    .then(function(status){
+      DAY_CACHE[tanggal] = status;
+      var currentSelected = document.getElementById("f-tanggal");
+      if (currentSelected && currentSelected.value !== tanggal) return; // tanggal sudah diganti lagi, abaikan hasil basi
+      renderDynamic(tanggal, status);
+    })
+    .catch(function(){
+      if (!silent) showToast("Tidak bisa memuat data tanggal ini", "err");
+    });
+}
+
+function parseEvidence(raw){
+  if (!raw) return null;
+  try {
+    var obj = JSON.parse(raw);
+    if (obj && typeof obj === "object") return obj;
+  } catch(e){}
+  return raw; // plain text
+}
+
+function renderEvidenceView(raw){
+  var parsed = parseEvidence(raw);
+  if (!parsed) return '';
+  if (typeof parsed === "string") {
+    return '<div class="evidence-view">' + parsed + '</div>';
+  }
+  function rowsHtml(obj){
+    return Object.keys(obj).map(function(k){
+      return '<div class="ev-row"><span class="ev-k">' + k + '</span><span class="ev-v">' + (obj[k] || '-') + '</span></div>';
+    }).join("");
+  }
+  if (Array.isArray(parsed)) {
+    return parsed.map(function(rowObj, idx){
+      return '<div class="evidence-view"><div class="ev-title">Baris ' + (idx+1) + '</div>' + rowsHtml(rowObj) + '</div>';
+    }).join("");
+  }
+  return '<div class="evidence-view">' + rowsHtml(parsed) + '</div>';
+}
+
+function fieldInputHtml(manualIdx, rowIdx, fi, f){
+  var id = "f-" + manualIdx + "-" + rowIdx + "-" + fi;
+  var inner;
+  if (f.type === "select") {
+    var opts = ['<option value="">Pilih...</option>'].concat(f.options.map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }));
+    inner = '<select class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="select">' + opts.join("") + '</select>';
+  } else if (f.type === "rupiah") {
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="rupiah" inputmode="numeric" placeholder="Rp 0">';
+  } else if (f.type === "tel") {
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx">';
+  } else if (f.type === "number") {
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="number" inputmode="numeric" placeholder="0">';
+  } else {
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="text" placeholder="' + f.label + '">';
+  }
+  return '<div class="field-item"><div class="field-label"><span class="req">*</span> ' + f.label + '</div>' + inner + '</div>';
+}
+
+function buildRowHtml(manualIdx, rowIdx, defs, removable){
+  var fieldsHtml = defs.map(function(f, fi){ return fieldInputHtml(manualIdx, rowIdx, fi, f); }).join("");
+  var removeBtn = removable ? '<button type="button" class="remove-row-btn">Hapus baris ini</button>' : '';
+  return '<div class="row-card" data-row="' + rowIdx + '">' + fieldsHtml + removeBtn + '</div>';
+}
+
+function buildFieldsHtml(manualIdx){
+  var group = EXTRA_FIELDS[manualIdx];
+  if (!group) {
+    return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="0">'
+      + '<div class="row-card" data-row="0">'
+      + '<div class="field-item"><div class="field-label"><span class="req">*</span> Keterangan / bukti capaian</div>'
+      + '<input type="text" class="field-input" data-key="Keterangan" maxlength="300" placeholder="Tulis keterangan singkat...">'
+      + '</div></div></div>';
+  }
+  var rowHtml = buildRowHtml(manualIdx, 0, group.fields, false);
+  var addBtn = group.repeatable ? '<button type="button" class="add-row-btn" data-idx="' + manualIdx + '">+ Tambah Baris</button>' : '';
+  return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="' + (group.repeatable?'1':'0') + '">' + rowHtml + '</div>' + addBtn;
+}
+
+function wireRowInputs(rowEl){
+  rowEl.querySelectorAll('.field-input[data-type="rupiah"]').forEach(function(inp){
+    inp.addEventListener('input', function(){ inp.value = formatRupiah(inp.value); });
+  });
+  var removeBtn = rowEl.querySelector('.remove-row-btn');
+  if (removeBtn) removeBtn.addEventListener('click', function(){ rowEl.remove(); });
+}
+
+function addRow(manualIdx){
+  var group = EXTRA_FIELDS[manualIdx];
+  var container = document.getElementById('rows-' + manualIdx);
+  var rowIdx = container.querySelectorAll('.row-card').length;
+  var wrapper = document.createElement('div');
+  wrapper.innerHTML = buildRowHtml(manualIdx, rowIdx, group.fields, true);
+  var rowEl = wrapper.firstChild;
+  container.appendChild(rowEl);
+  wireRowInputs(rowEl);
+  var firstInput = rowEl.querySelector('.field-input');
+  if (firstInput) firstInput.focus();
+}
+
+function wireFieldsValidation(manualIdx, chk, wrap){
+  var group = EXTRA_FIELDS[manualIdx];
+  if (group && group.repeatable) {
+    // validasi baris berulang cuma dicek saat submit, bukan per-blur
+    wrap.querySelectorAll('.field-input[data-type="rupiah"]').forEach(function(inp){
+      inp.addEventListener('input', function(){ inp.value = formatRupiah(inp.value); });
+    });
+    return;
+  }
+  var inputs = wrap.querySelectorAll(".field-input");
+  inputs.forEach(function(inp){
+    if (inp.getAttribute("data-type") === "rupiah") {
+      inp.addEventListener("input", function(){ inp.value = formatRupiah(inp.value); });
+    }
+    inp.addEventListener("blur", checkFieldsComplete);
+    inp.addEventListener("change", checkFieldsComplete);
+  });
+  function checkFieldsComplete(){
+    setTimeout(function(){
+      var stillEmpty = false;
+      inputs.forEach(function(inp2){
+        inp2.classList.remove('err');
+        if (!inp2.value || !inp2.value.trim()){ stillEmpty = true; inp2.classList.add('err'); }
+      });
+      if (stillEmpty && chk.checked && !wrap.contains(document.activeElement)) {
+        chk.checked = false;
+        wrap.classList.remove('show');
+        showToast('Lengkapi dulu isian sebelum mencentang "Ya"', 'err');
+      }
+    }, 150);
+  }
+}
+
+function collectFieldsValue(manualIdx){
+  var group = EXTRA_FIELDS[manualIdx];
+  var container = document.getElementById('rows-' + manualIdx);
+  if (!group) {
+    var inp = container.querySelector('.field-input');
+    var v0 = inp ? inp.value.trim() : "";
+    return { ok: true, json: v0, count: v0 ? 1 : 0 };
+  }
+  if (group.repeatable) {
+    var rows = Array.from(container.querySelectorAll('.row-card'));
+    var results = [];
+    var anyIncomplete = false;
+    rows.forEach(function(rowEl){
+      var inputs = rowEl.querySelectorAll('.field-input');
+      var vals = {}; var filledCount = 0; var total = inputs.length;
+      inputs.forEach(function(inp){
+        var v = inp.value.trim();
+        inp.classList.remove('err');
+        if (v) filledCount++;
+        vals[inp.getAttribute('data-key')] = v;
+      });
+      if (filledCount === 0) return; // baris kosong, dilewati
+      if (filledCount < total) {
+        anyIncomplete = true;
+        inputs.forEach(function(inp){ if (!inp.value.trim()) inp.classList.add('err'); });
+        return;
+      }
+      results.push(vals);
+    });
+    if (anyIncomplete) return { ok:false, json:"", count:0 };
+    return { ok:true, json: results.length ? JSON.stringify(results) : "", count: results.length };
+  }
+  var inputs2 = container.querySelectorAll('.field-input');
+  var obj = {}; var complete = true; var any = false;
+  inputs2.forEach(function(inp){
+    var v = inp.value.trim();
+    if (v) any = true;
+    if (!v) complete = false;
+    obj[inp.getAttribute('data-key')] = v;
+  });
+  if (!any) return { ok:true, json:"", count:0 };
+  if (!complete) return { ok:false, json:"", count:0 };
+  return { ok:true, json: JSON.stringify(obj), count:1 };
+}
+
+function renderDynamic(tanggal, status){
+  var labels = cfgCache.labels;
+  var manualLabels = labels.slice(2);
+  var locked = status.submitted;
+  var area = document.getElementById("dynamic-area");
+  var btn = document.getElementById("btn-submit");
+
+  var html = '';
+  if (locked) {
+    html += '<div class="locked-banner">Data tanggal ini sudah disimpan dan dikunci. Tampilan di bawah hanya untuk dilihat.</div>';
+  }
+
+  html += '<div class="card">'
+    +   '<h3>Absensi</h3>'
+    +   '<div class="row2">'
+    +     '<div><label>Jam Datang</label>' + (locked
+            ? '<input type="text" class="jam" value="' + (status.jamDatang || "-") + '" disabled>'
+            : '<input type="text" class="jam" id="f-datang" inputmode="numeric" placeholder="08:15" maxlength="5" value="' + (status.jamDatang || "") + '">') + '</div>'
+    +     '<div><label>Jam Pulang</label>' + (locked
+            ? '<input type="text" class="jam" value="' + (status.jamPulang || "-") + '" disabled>'
+            : '<input type="text" class="jam" id="f-pulang" inputmode="numeric" placeholder="16:45" maxlength="5" value="' + (status.jamPulang || "") + '">') + '</div>'
+    +   '</div>'
+    +   '<div id="status-datang" class="status-pill no" style="display:none"></div> '
+    +   '<div id="status-pulang" class="status-pill no" style="display:none"></div>'
+    + '</div>';
+
+  html += '<div class="card">'
+    + '<h3>Checklist Kinerja Harian</h3>'
+    + '<div class="item">'
+    +   '<div class="item-row"><div class="txt"><span class="num">1</span>' + labels[0] + '<div class="hint">Otomatis dari Jam Datang</div></div>'
+    +   (locked
+          ? '<span class="badge-static ' + (status.values[0] ? "on" : "off") + '">' + (status.values[0] ? "Ya" : "Tidak") + '</span>'
+          : '<label class="switch locked"><input type="checkbox" id="chk-datang" disabled><span class="slider"></span></label>')
+    + '</div></div>'
+    + '<div class="item">'
+    +   '<div class="item-row"><div class="txt"><span class="num">2</span>' + labels[1] + '<div class="hint">Otomatis dari Jam Pulang</div></div>'
+    +   (locked
+          ? '<span class="badge-static ' + (status.values[1] ? "on" : "off") + '">' + (status.values[1] ? "Ya" : "Tidak") + '</span>'
+          : '<label class="switch locked"><input type="checkbox" id="chk-pulang" disabled><span class="slider"></span></label>')
+    + '</div></div>'
+    + manualLabels.map(function(lbl, i){
+        var v = status.values[i+2];
+        var evi = status.evidence[i+2];
+        var isAuto = AUTO_LOCKED.indexOf(i) !== -1;
+        var isSharedFilled = SHARED_PEER_IDX.indexOf(i) !== -1 && v === true;
+
+        if (isAuto) {
+          return '<div class="item"><div class="item-row">'
+            + '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '<div class="hint">Otomatis mengikuti input MAKASSAR</div></div>'
+            + '<span class="badge-static ' + (v ? "on" : "off") + '">' + (v ? "Ya" : "Tidak") + '</span>'
+            + '</div></div>';
+        }
+
+        if (locked) {
+          return '<div class="item"><div class="item-row">'
+            + '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
+            + '<span class="badge-static ' + (v ? "on" : "off") + '">' + (v ? "Ya" : "Tidak") + '</span>'
+            + '</div>'
+            + (v ? renderEvidenceView(evi) : '')
+            + '</div>';
+        }
+
+        if (isSharedFilled) {
+          return '<div class="item"><div class="item-row">'
+            + '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '<div class="hint">Sudah diisi rekan satu tim, tidak perlu diisi ulang</div></div>'
+            + '<span class="badge-static on">Ya</span>'
+            + '</div>'
+            + renderEvidenceView(evi)
+            + '</div>';
+        }
+
+        if (SKIP_EVIDENCE) {
+          return '<div class="item"><div class="item-row">'
+            + '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
+            + '<label class="switch"><input type="checkbox" class="chk-manual" data-idx="' + i + '"' + (v ? ' checked' : '') + '><span class="slider"></span></label>'
+            + '</div></div>';
+        }
+
+        var fieldsHtml = buildFieldsHtml(i);
+        return '<div class="item">'
+          + '<div class="item-row">'
+          +   '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
+          +   '<label class="switch"><input type="checkbox" class="chk-manual" data-idx="' + i + '"' + (v ? ' checked' : '') + '><span class="slider"></span></label>'
+          + '</div>'
+          + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + '</div>'
+          + '</div>';
+      }).join("")
+    + '</div>';
+
+  area.innerHTML = html;
+
+  if (locked) {
+    btn.style.display = "none";
+    return;
+  }
+  btn.style.display = "block";
+  btn.disabled = false;
+  btn.textContent = "Simpan Kinerja Hari Ini";
+
+  // wire manual toggles + their field groups
+  manualLabels.forEach(function(lbl, i){
+    if (AUTO_LOCKED.indexOf(i) !== -1) return;
+    var chk = document.querySelector('.chk-manual[data-idx="' + i + '"]');
+    if (!chk) return;
+    var wrap = document.getElementById('fields-' + i);
+    if (!wrap) return; // SKIP_EVIDENCE: toggle polos, tidak butuh wrap/validasi
+    chk.addEventListener('change', function(){
+      if (chk.checked) {
+        wrap.classList.add('show');
+        var firstInput = wrap.querySelector('.field-input');
+        if (firstInput) firstInput.focus();
+      } else {
+        wrap.classList.remove('show');
+      }
+    });
+    wireFieldsValidation(i, chk, wrap);
+  });
+
+  area.querySelectorAll('.add-row-btn').forEach(function(btn2){
+    btn2.addEventListener('click', function(){
+      addRow(parseInt(btn2.getAttribute('data-idx'), 10));
+    });
+  });
+
+  var elDatang = document.getElementById("f-datang");
+  var elPulang = document.getElementById("f-pulang");
+  var chkDatang = document.getElementById("chk-datang");
+  var chkPulang = document.getElementById("chk-pulang");
+  var stDatang = document.getElementById("status-datang");
+  var stPulang = document.getElementById("status-pulang");
+
+  formatJamInput(elDatang);
+  formatJamInput(elPulang);
+
+  function evalTime(){
+    if (isValidJam(elDatang.value)){
+      var ok = elDatang.value <= BATAS_DATANG;
+      chkDatang.checked = ok;
+      stDatang.style.display = "inline-block";
+      stDatang.className = "status-pill " + (ok ? "ok" : "no");
+      stDatang.textContent = ok ? "Datang tepat waktu" : "Datang lewat 08:15";
+    } else {
+      chkDatang.checked = false;
+      stDatang.style.display = "none";
+    }
+    if (isValidJam(elPulang.value)){
+      var ok2 = elPulang.value >= BATAS_PULANG;
+      chkPulang.checked = ok2;
+      stPulang.style.display = "inline-block";
+      stPulang.className = "status-pill " + (ok2 ? "ok" : "no");
+      stPulang.textContent = ok2 ? "Pulang sesuai jam" : "Pulang sebelum 16:45";
+    } else {
+      chkPulang.checked = false;
+      stPulang.style.display = "none";
+    }
+  }
+  elDatang.addEventListener("input", evalTime);
+  elPulang.addEventListener("input", evalTime);
+  evalTime();
+
+  btn.onclick = function(){
+    var tanggal2 = document.getElementById("f-tanggal").value;
+    if (!tanggal2){ showToast("Pilih tanggal dulu", "err"); return; }
+    if (elDatang.value && !isValidJam(elDatang.value)){ showToast("Format Jam Datang salah, contoh: 08:15", "err"); return; }
+    if (elPulang.value && !isValidJam(elPulang.value)){ showToast("Format Jam Pulang salah, contoh: 16:45", "err"); return; }
+
+    var checklist = [];
+    var evidence = [];
+    var hasIncomplete = false;
+    var belowMinRowsLabels = [];
+
+    manualLabels.forEach(function(lbl, i){
+      if (AUTO_LOCKED.indexOf(i) !== -1) {
+        checklist.push(false); // diabaikan backend untuk indeks auto
+        evidence.push("");
+        return;
+      }
+
+      var alreadyShared = SHARED_PEER_IDX.indexOf(i) !== -1 && status.values[i+2] === true;
+      if (alreadyShared) {
+        // sudah diisi rekan satu tim, tidak ada input di form ini, pertahankan nilainya
+        checklist.push(true);
+        evidence.push(status.evidence[i+2] || "");
+        return;
+      }
+
+      var chk = document.querySelector('.chk-manual[data-idx="' + i + '"]');
+      var wrap = document.getElementById('fields-' + i);
+
+      if (!wrap) {
+        // SKIP_EVIDENCE: toggle polos tanpa validasi
+        checklist.push(chk.checked);
+        evidence.push("");
+        return;
+      }
+
+      if (chk.checked) {
+        var result = collectFieldsValue(i);
+        if (!result.ok) {
+          hasIncomplete = true;
+          chk.checked = false;
+          wrap.classList.remove('show');
+          checklist.push(false);
+          evidence.push("");
+          return;
+        }
+        var groupDef = EXTRA_FIELDS[i];
+        var minRows = (groupDef && groupDef.minRows) ? groupDef.minRows : 1;
+        if (result.count === 0) {
+          checklist.push(false);
+          evidence.push("");
+        } else if (result.count < minRows) {
+          checklist.push(false);
+          evidence.push(result.json);
+          belowMinRowsLabels.push(lbl + ' (' + result.count + '/' + minRows + ')');
+        } else {
+          checklist.push(true);
+          evidence.push(result.json);
+        }
+      } else {
+        checklist.push(false);
+        evidence.push("");
+      }
+    });
+
+    if (hasIncomplete) {
+      showToast('Ada isian bukti capaian yang belum lengkap, silakan periksa kembali', 'err');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Menyimpan...";
+
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({
+        nama: NAMA,
+        tanggal: tanggal2,
+        jamDatang: elDatang.value || "",
+        jamPulang: elPulang.value || "",
+        checklist: checklist,
+        evidence: evidence
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res.ok){
+        if (belowMinRowsLabels.length){
+          showToast("Tersimpan, tapi belum capai target: " + belowMinRowsLabels.join(", "), "err");
+        } else {
+          showToast("Tersimpan ke Google Sheet ✓", "okc");
+        }
+        loadDay(tanggal2, true);
+      } else {
+        btn.disabled = false;
+        btn.textContent = "Simpan Kinerja Hari Ini";
+        showToast(res.error || "Gagal menyimpan", "err");
+      }
+    })
+    .catch(function(){
+      btn.disabled = false;
+      btn.textContent = "Simpan Kinerja Hari Ini";
+      showToast("Tidak bisa terhubung ke server", "err");
+    });
+  };
+}
+
+loadForm();
+</script>
+</body>
+</html>

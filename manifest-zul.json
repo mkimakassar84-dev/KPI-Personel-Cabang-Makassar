@@ -1,0 +1,24 @@
+{
+  "name": "KPI ZUL",
+  "short_name": "ZUL",
+  "start_url": "./input-zul.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1f5",
+  "theme_color": "#1c2733",
+  "icons": [
+    {
+      "src": "./icon-zul-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-zul-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
