@@ -69,6 +69,10 @@
     position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
     background:linear-gradient(to top, var(--bg) 60%, transparent);
   }
+  .draft-indicator{
+    text-align:center; font-size:11px; font-weight:700; color:var(--green);
+    margin-bottom:6px; opacity:0; transition:opacity .3s ease;
+  }
   button.submit{
     max-width:448px; margin:0 auto; display:block; width:100%;
     background:var(--navy); color:#fff; border:none; border-radius:14px;
@@ -197,7 +201,7 @@ function renderForm(labels){
         }).join("")
   +   '</div>'
   + '</div>'
-  + '<div class="submitbar"><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
+  + '<div class="submitbar"><div id="draft-indicator" class="draft-indicator">Tersimpan otomatis ✓</div><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
 
   app.innerHTML = html;
 
@@ -368,6 +372,12 @@ function renderForm(labels){
         if (myToken !== reqToken) return;
         lastDayStatus = ds;
         setSubmitButtonState(!!ds.submitted);
+        if (!ds.submitted) {
+          MANUAL_IDX.forEach(function(idx){
+            var el = document.querySelector('.chk-manual[data-src="' + idx + '"]');
+            if (el) el.checked = !!ds.values[idx];
+          });
+        }
         maybeBuildReport();
       })
       .catch(function(){});
@@ -418,6 +428,42 @@ function renderForm(labels){
   });
   loadTeamStatus(reqToken);
   loadDayStatusForReport(reqToken);
+
+  var draftTimerM = null;
+  var draftIndicatorTimerM = null;
+
+  function showDraftIndicatorM(){
+    var el = document.getElementById('draft-indicator');
+    if (!el) return;
+    el.style.opacity = '1';
+    clearTimeout(draftIndicatorTimerM);
+    draftIndicatorTimerM = setTimeout(function(){ el.style.opacity = '0'; }, 1800);
+  }
+
+  function doDraftSaveM(){
+    if (lastDayStatus && lastDayStatus.submitted) return; // sudah terkunci, tidak perlu draft lagi
+    var tanggal = elTanggal.value;
+    if (!tanggal) return;
+    var checklist = MANUAL_IDX.map(function(idx){
+      var el = document.querySelector('.chk-manual[data-src="' + idx + '"]');
+      return el ? el.checked : false;
+    });
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({ nama: "MAKASSAR", tanggal: tanggal, checklist: checklist, draft: true })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){ if (res.ok) showDraftIndicatorM(); })
+      .catch(function(){});
+  }
+
+  app.addEventListener('change', function(e){
+    if (e.target.classList && e.target.classList.contains('chk-manual')) {
+      clearTimeout(draftTimerM);
+      draftTimerM = setTimeout(doDraftSaveM, 900);
+    }
+  });
 
   document.getElementById("btn-wa-share").addEventListener("click", async function(){
     if (!lastDayStatus || !lastDayStatus.submitted) {

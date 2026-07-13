@@ -118,6 +118,10 @@
     position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
     background:linear-gradient(to top, var(--bg) 60%, transparent);
   }
+  .draft-indicator{
+    text-align:center; font-size:11px; font-weight:700; color:var(--green);
+    margin-bottom:6px; opacity:0; transition:opacity .3s ease;
+  }
   button.submit{
     max-width:448px; margin:0 auto; display:block; width:100%;
     background:var(--navy); color:#fff; border:none; border-radius:14px;
@@ -143,14 +147,6 @@
   .badge-static.off{ background:#fdecea; color:var(--red); }  #dynamic-area{ animation: fadeInArea .18s ease; }
   @keyframes fadeInArea{ from{ opacity:.3; } to{ opacity:1; } }
 </style>
-<link rel="manifest" href="manifest-reza.json">
-<meta name="theme-color" content="#1c2733">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="REZA">
-<link rel="apple-touch-icon" href="icon-reza-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-reza-192.png">
 </head>
 <body>
 
@@ -248,7 +244,7 @@ function renderShell(cfg){
   +   '</div>'
   +   '<div id="dynamic-area"></div>'
   + '</div>'
-  + '<div class="submitbar"><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
+  + '<div class="submitbar"><div id="draft-indicator" class="draft-indicator">Tersimpan otomatis ✓</div><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
 
   app.innerHTML = html;
   document.getElementById("f-tanggal").addEventListener("change", function(){
@@ -608,12 +604,7 @@ function renderDynamic(tanggal, status){
   elPulang.addEventListener("input", evalTime);
   evalTime();
 
-  btn.onclick = function(){
-    var tanggal2 = document.getElementById("f-tanggal").value;
-    if (!tanggal2){ showToast("Pilih tanggal dulu", "err"); return; }
-    if (elDatang.value && !isValidJam(elDatang.value)){ showToast("Format Jam Datang salah, contoh: 08:15", "err"); return; }
-    if (elPulang.value && !isValidJam(elPulang.value)){ showToast("Format Jam Pulang salah, contoh: 16:45", "err"); return; }
-
+  function collectManualState(mutateOnIncomplete){
     var checklist = [];
     var evidence = [];
     var hasIncomplete = false;
@@ -621,14 +612,13 @@ function renderDynamic(tanggal, status){
 
     manualLabels.forEach(function(lbl, i){
       if (AUTO_LOCKED.indexOf(i) !== -1) {
-        checklist.push(false); // diabaikan backend untuk indeks auto
+        checklist.push(false);
         evidence.push("");
         return;
       }
 
       var alreadyShared = SHARED_PEER_IDX.indexOf(i) !== -1 && status.values[i+2] === true;
       if (alreadyShared) {
-        // sudah diisi rekan satu tim, tidak ada input di form ini, pertahankan nilainya
         checklist.push(true);
         evidence.push(status.evidence[i+2] || "");
         return;
@@ -638,7 +628,6 @@ function renderDynamic(tanggal, status){
       var wrap = document.getElementById('fields-' + i);
 
       if (!wrap) {
-        // SKIP_EVIDENCE: toggle polos tanpa validasi
         checklist.push(chk.checked);
         evidence.push("");
         return;
@@ -648,8 +637,7 @@ function renderDynamic(tanggal, status){
         var result = collectFieldsValue(i);
         if (!result.ok) {
           hasIncomplete = true;
-          chk.checked = false;
-          wrap.classList.remove('show');
+          if (mutateOnIncomplete) { chk.checked = false; wrap.classList.remove('show'); }
           checklist.push(false);
           evidence.push("");
           return;
@@ -673,10 +661,66 @@ function renderDynamic(tanggal, status){
       }
     });
 
-    if (hasIncomplete) {
+    return { checklist: checklist, evidence: evidence, hasIncomplete: hasIncomplete, belowMinRowsLabels: belowMinRowsLabels };
+  }
+
+  var draftTimer = null;
+  var draftIndicatorTimer = null;
+  var suppressDraftSave = false;
+
+  function showDraftIndicator(){
+    var el = document.getElementById('draft-indicator');
+    if (!el) return;
+    el.style.opacity = '1';
+    clearTimeout(draftIndicatorTimer);
+    draftIndicatorTimer = setTimeout(function(){ el.style.opacity = '0'; }, 1800);
+  }
+
+  function doDraftSave(){
+    if (suppressDraftSave) return;
+    var tanggal2 = document.getElementById("f-tanggal").value;
+    if (!tanggal2) return;
+    var jamD = isValidJam(elDatang.value) ? elDatang.value : "";
+    var jamP = isValidJam(elPulang.value) ? elPulang.value : "";
+    var state = collectManualState(false);
+    fetch(WEBAPP_URL, {
+      method: "POST",
+      headers: {"Content-Type": "text/plain;charset=utf-8"},
+      body: JSON.stringify({
+        nama: NAMA, tanggal: tanggal2, jamDatang: jamD, jamPulang: jamP,
+        checklist: state.checklist, evidence: state.evidence, draft: true
+      })
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(res){ if (res.ok) showDraftIndicator(); })
+      .catch(function(){});
+  }
+
+  function scheduleDraftSave(){
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(doDraftSave, 900);
+  }
+
+  area.addEventListener('input', scheduleDraftSave);
+  area.addEventListener('change', scheduleDraftSave);
+
+  btn.onclick = function(){
+    var tanggal2 = document.getElementById("f-tanggal").value;
+    if (!tanggal2){ showToast("Pilih tanggal dulu", "err"); return; }
+    if (elDatang.value && !isValidJam(elDatang.value)){ showToast("Format Jam Datang salah, contoh: 08:15", "err"); return; }
+    if (elPulang.value && !isValidJam(elPulang.value)){ showToast("Format Jam Pulang salah, contoh: 16:45", "err"); return; }
+
+    var state = collectManualState(true);
+    if (state.hasIncomplete) {
       showToast('Ada isian bukti capaian yang belum lengkap, silakan periksa kembali', 'err');
       return;
     }
+    var checklist = state.checklist;
+    var evidence = state.evidence;
+    var belowMinRowsLabels = state.belowMinRowsLabels;
+
+    clearTimeout(draftTimer);
+    suppressDraftSave = true;
 
     btn.disabled = true;
     btn.textContent = "Menyimpan...";
@@ -703,12 +747,14 @@ function renderDynamic(tanggal, status){
         }
         loadDay(tanggal2, true);
       } else {
+        suppressDraftSave = false;
         btn.disabled = false;
         btn.textContent = "Simpan Kinerja Hari Ini";
         showToast(res.error || "Gagal menyimpan", "err");
       }
     })
     .catch(function(){
+      suppressDraftSave = false;
       btn.disabled = false;
       btn.textContent = "Simpan Kinerja Hari Ini";
       showToast("Tidak bisa terhubung ke server", "err");
