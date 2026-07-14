@@ -509,7 +509,7 @@ function renderOverview(list, bulan){
       interaction:{ mode:"nearest", intersect:false },
       onHover: function(evt, elements, chart){ chart.canvas.style.cursor = elements.length ? "pointer" : "default"; },
       scales:{
-        y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobile?10:12 } } },
+        y:{ beginAtZero:true, max:110, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobile?10:12 } } },
         x:{ ticks:{ font:{ size: isMobile?9:11 }, maxRotation:0, minRotation:0, autoSkip:false } }
       },
       plugins:{
@@ -697,7 +697,7 @@ function renderPerson(nama, bulan, detail, trend){
       layout:{ padding:{ top: 14, right: 8 } },
       interaction:{ mode:"nearest", intersect:false },
       scales:{
-        y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobileDaily?10:12 } } },
+        y:{ beginAtZero:true, max:110, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobileDaily?10:12 } } },
         x:{ ticks:{ font:{ size: isMobileDaily?9:11 }, maxRotation:0, autoSkip:true, maxTicksLimit: isMobileDaily?10:16 } }
       },
       plugins:{
@@ -743,7 +743,7 @@ function renderPerson(nama, bulan, detail, trend){
       layout:{ padding:{ top: 14, right: 8 } },
       interaction:{ mode:"nearest", intersect:false },
       scales:{
-        y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobileTrend?10:12 } } },
+        y:{ beginAtZero:true, max:110, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobileTrend?10:12 } } },
         x:{ ticks:{ font:{ size: isMobileTrend?10:12 } } }
       },
       plugins:{
@@ -1192,7 +1192,7 @@ function buildPersonImage(nama, bulan, detail){
   ctx.fillStyle = "#eef1f5"; ctx.fillRect(0,0,W,H);
   ctx.fillStyle = "#1c2733"; ctx.fillRect(0,0,W,headerH);
   ctx.fillStyle = "#fff"; ctx.font = "700 21px -apple-system, Roboto, Arial, sans-serif";
-  ctx.fillText("Rekap Kinerja " + nama, padX, 44);
+  ctx.fillText(nama === "MAKASSAR" ? "Rekap Kinerja Cabang MAKASSAR" : "Rekap Kinerja " + nama, padX, 44);
   ctx.font = "400 13px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.75)";
   ctx.fillText("PT. Mitra Kabel Indonesia — Cabang Makassar", padX, 66);
@@ -1343,10 +1343,6 @@ document.getElementById("btn-wa-share-dash").addEventListener("click", async fun
     if (nama === "__OVERVIEW__") {
       var blob = await buildOverviewImage(cached || [], bulan);
       await shareBlob(blob, info.caption, btn, origText);
-    } else if (nama === "MAKASSAR") {
-      await loadHtml2Canvas();
-      var canvas = await html2canvas(content, { backgroundColor: "#eef1f5", scale: 2, useCORS: true });
-      canvas.toBlob(function(b){ shareBlob(b, info.caption, btn, origText); }, "image/png", 0.95);
     } else {
       var detail = cached ? cached.detail : null;
       if (!detail) { btn.disabled=false; btn.textContent=origText; showToastDash("Data belum siap", "err"); return; }
