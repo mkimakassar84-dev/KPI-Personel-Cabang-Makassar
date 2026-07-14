@@ -310,10 +310,11 @@ function initFilters(){
   var sel = document.getElementById("f-nama");
   var urlParams = new URLSearchParams(window.location.search);
   var lockedNama = urlParams.get("nama");
-  var isLocked = urlParams.get("lock") === "1" && lockedNama && PERSON_LIST.indexOf(lockedNama) !== -1;
-  IS_LOCKED_VIEW = isLocked;
+  var isPersonLocked = urlParams.get("lock") === "1" && lockedNama && PERSON_LIST.indexOf(lockedNama) !== -1;
+  var isTeamLocked = urlParams.get("lock") === "1" && lockedNama === "__OVERVIEW__";
+  IS_LOCKED_VIEW = isPersonLocked;
 
-  if (isLocked) {
+  if (isPersonLocked) {
     var o = document.createElement("option");
     o.value = lockedNama; o.textContent = lockedNama;
     sel.appendChild(o);
@@ -324,6 +325,14 @@ function initFilters(){
     if (title) title.textContent = "Kinerja Saya - " + lockedNama;
     var waBtn = document.getElementById("btn-wa-share-dash");
     if (waBtn) waBtn.style.display = "none";
+  } else if (isTeamLocked) {
+    var optOv = document.createElement("option");
+    optOv.value = "__OVERVIEW__";
+    optOv.textContent = "Semua Tim (Perbandingan)";
+    sel.appendChild(optOv);
+    sel.value = "__OVERVIEW__";
+    var fieldOv = sel.closest(".field");
+    if (fieldOv) fieldOv.style.display = "none"; // tidak bisa memilih filter Personel
   } else {
     var optOverview = document.createElement("option");
     optOverview.value = "__OVERVIEW__";
@@ -344,7 +353,7 @@ function initFilters(){
   document.getElementById("f-bulan").value = currentYearMonth();
 
   sel.addEventListener("change", function(){ load(); });
-  document.getElementById("f-bulan").addEventListener("change", function(){ load(); if (!isLocked) setTimeout(prefetchAllPersons, 500); });
+  document.getElementById("f-bulan").addEventListener("change", function(){ load(); if (!isPersonLocked) setTimeout(prefetchAllPersons, 500); });
   document.getElementById("btn-refresh").addEventListener("click", function(){ load(true); });
 }
 
@@ -492,7 +501,7 @@ function renderOverview(list, bulan){
       onHover: function(evt, elements, chart){ chart.canvas.style.cursor = elements.length ? "pointer" : "default"; },
       scales:{
         y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobile?10:12 } } },
-        x:{ ticks:{ font:{ size: isMobile?10:12 } } }
+        x:{ ticks:{ font:{ size: isMobile?9:11 }, maxRotation:0, minRotation:0, autoSkip:false } }
       },
       plugins:{
         legend:{ display:false },
@@ -851,7 +860,7 @@ function buildOverviewImage(list, bulan){
   var headerH = 108;
   var cardsH = 92, cardsGap = 14;
   var chartH = 260;
-  var rankHeaderH = 46;
+  var rankHeaderH = 64;
   var footerH = 54;
   var sectionGap = 22;
 
@@ -875,7 +884,7 @@ function buildOverviewImage(list, bulan){
   ctx.fillText("Rekap Kinerja Tim Makassar", padX, 44);
   ctx.font = "400 13px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.fillText("PT. Mitra Kabel Indonesia — Cabang Makassar · Bulan Berjalan Saat Ini", padX, 66);
+  ctx.fillText("PT. Mitra Kabel Indonesia — Cabang Makassar", padX, 66);
   ctx.font = "700 15px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillStyle = "#fff";
   ctx.fillText(monthLabel(bulan), padX, 90);
@@ -938,6 +947,10 @@ function buildOverviewImage(list, bulan){
     ctx.fillText("#" + (i+1), padX+2, y-14);
     ctx.font = "700 14px -apple-system, Roboto, Arial, sans-serif";
     ctx.fillText(p.nama, padX+34, y-14);
+    var nameW = ctx.measureText(p.nama).width;
+    ctx.font = "400 10.5px -apple-system, Roboto, Arial, sans-serif";
+    ctx.fillStyle = "#9aa5b1";
+    ctx.fillText(" · " + (p.countedDays||0) + " hari kerja", padX+34+nameW, y-14);
 
     ctx.textAlign = "right"; ctx.font = "800 15px -apple-system, Roboto, Arial, sans-serif";
     ctx.fillStyle = barColor;
@@ -1125,7 +1138,7 @@ function currentViewCaption(){
   var bulan = document.getElementById("f-bulan").value || currentYearMonth();
   var bulanTxt = monthLabel(bulan);
   if (nama === "__OVERVIEW__") {
-    return { caption: "Rekap Kinerja Tim Makassar \u2013 Bulan Berjalan Saat Ini\n" + BASE_SITE_URL + "rekap-kinerja-tim.html" };
+    return { caption: "Rekap Kinerja Tim Makassar \u2013 " + bulanTxt + "\n" + BASE_SITE_URL + "rekap-kinerja-tim.html?nama=__OVERVIEW__&lock=1" };
   }
   if (nama === "MAKASSAR") {
     return { caption: "Rekap Kinerja Cabang MAKASSAR - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar\n" + BASE_SITE_URL + "input-makassar.html" };
