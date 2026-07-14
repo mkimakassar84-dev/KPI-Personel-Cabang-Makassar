@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Input Kinerja Harian - ZUL</title>
-<link rel="preconnect" href="https://script.google.com" crossorigin>
-<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<link rel="dns-prefetch" href="https://script.google.com">
 <style>
   :root{
     --navy:#1c2733;
@@ -199,7 +196,7 @@ var BATAS_DATANG = "08:15";
 var BATAS_PULANG = "16:45";
 
 // manualIndex 0..7 = indikator item 3..10 (labels[2..9])
-var EXTRA_FIELDS = {"1": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan", "type": "number"}, {"label": "Total Quantity", "type": "number"}, {"label": "Total Koli", "type": "number"}]}, "4": {"repeatable": false, "fields": [{"label": "Jumlah Tanda Terima yang diarsip hari ini", "type": "number"}]}, "6": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan Diinput Hari ini", "type": "number"}]}, "7": {"repeatable": true, "fields": [{"label": "Jumlah Ekspedisi", "type": "number"}, {"label": "Laporan Terantar (jika ada tidak terantar, jelaskan)", "type": "text"}]}};
+var EXTRA_FIELDS = {"1": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan", "type": "number"}, {"label": "Total Quantity", "type": "number"}, {"label": "Total Koli", "type": "number"}]}, "4": {"repeatable": false, "fields": [{"label": "Jumlah Tanda Terima yang diarsip hari ini", "type": "number"}]}, "3": {"repeatable": false, "fields": [{"label": "Jumlah Ritase", "type": "select", "options": ["1 Ritase", "2 Ritase", "3 Ritase", "Diatas 3 Ritase"]}]}, "5": {"repeatable": false, "fields": [{"label": "Waktu Pelaksanaan", "type": "select", "options": ["PAGI", "SORE"]}]}, "6": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan Diinput Hari ini", "type": "number"}]}, "7": {"repeatable": true, "fields": [{"label": "Jumlah Ekspedisi", "type": "number"}, {"label": "Laporan Terantar (jika ada tidak terantar, jelaskan)", "type": "text"}]}};
 var AUTO_LOCKED = [0];
 var SKIP_EVIDENCE = false;
 var SHARED_PEER_IDX = []; // array of manualIndex yang nilainya bisa datang dari peer

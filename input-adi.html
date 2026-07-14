@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Input Kinerja Harian - ADI</title>
-<link rel="preconnect" href="https://script.google.com" crossorigin>
-<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<link rel="dns-prefetch" href="https://script.google.com">
 <style>
   :root{
     --navy:#1c2733;
@@ -199,7 +196,7 @@ var BATAS_DATANG = "08:15";
 var BATAS_PULANG = "16:45";
 
 // manualIndex 0..7 = indikator item 3..10 (labels[2..9])
-var EXTRA_FIELDS = {"0": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "1": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan", "type": "text"}]}, "2": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "3": {"repeatable": false, "fields": [{"label": "Jumlah Faktur MKI", "type": "number"}, {"label": "Jumlah Faktur CFN", "type": "number"}]}, "6": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan Complaint", "type": "text"}]}};
+var EXTRA_FIELDS = {"0": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "1": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan", "type": "text"}]}, "2": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "3": {"repeatable": false, "fields": [{"label": "Jumlah Faktur MKI", "type": "number"}, {"label": "Jumlah Faktur CFN", "type": "number"}]}, "6": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan Complaint", "type": "text"}]}, "7": {"repeatable": false, "fields": [{"label": "Waktu Pelaksanaan", "type": "select", "options": ["PAGI", "SORE"]}]}};
 var AUTO_LOCKED = [];
 var SKIP_EVIDENCE = false;
 var SHARED_PEER_IDX = []; // array of manualIndex yang nilainya bisa datang dari peer
