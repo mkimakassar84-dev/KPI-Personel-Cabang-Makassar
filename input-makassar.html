@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Input Kinerja Harian - MAKASSAR</title>
-<link rel="preconnect" href="https://script.google.com" crossorigin>
-<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
-<link rel="dns-prefetch" href="https://script.google.com">
 <style>
   :root{
     --navy:#1c2733;
@@ -425,71 +422,41 @@ function renderForm(labels){
       .catch(function(){});
   }
 
-  var TEAM_STATUS_CACHE_KEY = "kpiTeamStatusCacheV1";
-  function getTeamStatusCache(){
-    try { return JSON.parse(localStorage.getItem(TEAM_STATUS_CACHE_KEY) || "{}"); } catch(e){ return {}; }
-  }
-  function setTeamStatusCache(tanggal, data){
-    try {
-      var c = getTeamStatusCache();
-      c[tanggal] = data;
-      localStorage.setItem(TEAM_STATUS_CACHE_KEY, JSON.stringify(c));
-    } catch(e){}
-  }
-
-  function renderTeamStatus(st){
-    var teamContent = document.getElementById("team-content");
-    var waBtn = document.getElementById("btn-wa-share");
-    lastTeamStatus = st;
-    function personRows(team, data){
-      return team.map(function(n){
-        var d = data[n] || {datang:false, pulang:false, jamDatang:'', jamPulang:''};
-        return '<div class="teamrow"><span class="who">' + n + '</span>'
-          + '<span>' + jamBadge(d.jamDatang, d.datang) + ' ' + jamBadge(d.jamPulang, d.pulang) + '</span></div>';
-      }).join("");
-    }
-    teamContent.innerHTML = ''
-      + '<div class="teamsummary">'
-      +   '<div class="box"><div class="lbl">Marketing</div><div class="val">' + (st.marketingDatangOk && st.marketingPulangOk ? "Lengkap" : "Belum lengkap") + '</div></div>'
-      +   '<div class="box"><div class="lbl">Logistik</div><div class="val">' + (st.logistikDatangOk && st.logistikPulangOk ? "Lengkap" : "Belum lengkap") + '</div></div>'
-      + '</div>'
-      + '<div class="teamlegend"><span></span><span>Datang &nbsp;&nbsp; Pulang</span></div>'
-      + personRows(MARKETING_TEAM, st.marketing)
-      + '<div style="height:8px"></div>'
-      + personRows(LOGISTIK_TEAM, st.logistik);
-    teamContent.classList.remove("loading-fade");
-    waBtn.disabled = false;
-    waBtn.style.display = "block";
-    maybeBuildReport();
-  }
-
   function loadTeamStatus(myToken){
     var teamContent = document.getElementById("team-content");
     var waBtn = document.getElementById("btn-wa-share");
-    var tanggal = elTanggal.value;
-    var cached = getTeamStatusCache()[tanggal];
-    if (cached) {
-      // Tampilkan instan dari cache lokal sambil data terbaru diambil di belakang layar —
-      // ini yang bikin ABSENSI TIM (OTOMATIS) tidak lagi menunggu 15+ detik setiap dibuka.
-      renderTeamStatus(cached);
-    } else {
-      waBtn.disabled = true;
-      teamContent.classList.add("loading-fade");
-    }
-    fetch(WEBAPP_URL + "?action=teamStatus&tanggal=" + tanggal)
+    waBtn.disabled = true;
+    teamContent.classList.add("loading-fade");
+    fetch(WEBAPP_URL + "?action=teamStatus&tanggal=" + elTanggal.value)
       .then(function(r){ return r.json(); })
       .then(function(st){
         if (myToken !== reqToken) return;
-        if (st.error){
-          if (!cached) { teamContent.textContent = "Gagal memuat status tim."; teamContent.classList.remove("loading-fade"); }
-          return;
+        if (st.error){ teamContent.textContent = "Gagal memuat status tim."; teamContent.classList.remove("loading-fade"); return; }
+        lastTeamStatus = st;
+        function personRows(team, data){
+          return team.map(function(n){
+            var d = data[n] || {datang:false, pulang:false, jamDatang:'', jamPulang:''};
+            return '<div class="teamrow"><span class="who">' + n + '</span>'
+              + '<span>' + jamBadge(d.jamDatang, d.datang) + ' ' + jamBadge(d.jamPulang, d.pulang) + '</span></div>';
+          }).join("");
         }
-        setTeamStatusCache(tanggal, st);
-        renderTeamStatus(st);
+        teamContent.innerHTML = ''
+          + '<div class="teamsummary">'
+          +   '<div class="box"><div class="lbl">Marketing</div><div class="val">' + (st.marketingDatangOk && st.marketingPulangOk ? "Lengkap" : "Belum lengkap") + '</div></div>'
+          +   '<div class="box"><div class="lbl">Logistik</div><div class="val">' + (st.logistikDatangOk && st.logistikPulangOk ? "Lengkap" : "Belum lengkap") + '</div></div>'
+          + '</div>'
+          + '<div class="teamlegend"><span></span><span>Datang &nbsp;&nbsp; Pulang</span></div>'
+          + personRows(MARKETING_TEAM, st.marketing)
+          + '<div style="height:8px"></div>'
+          + personRows(LOGISTIK_TEAM, st.logistik);
+        teamContent.classList.remove("loading-fade");
+        waBtn.style.display = "block";
+        maybeBuildReport();
       })
       .catch(function(){
         if (myToken !== reqToken) return;
-        if (!cached) { teamContent.textContent = "Tidak bisa memuat status tim."; teamContent.classList.remove("loading-fade"); }
+        teamContent.textContent = "Tidak bisa memuat status tim.";
+        teamContent.classList.remove("loading-fade");
       });
   }
   elTanggal.addEventListener("change", function(){
@@ -621,7 +588,11 @@ function renderForm(labels){
         if (res.ok){
           showToast("Tersimpan ke Google Sheet ✓", "okc");
           setSubmitButtonState(true);
-          if (lastDayStatus) lastDayStatus.submitted = true;
+          if (lastDayStatus) {
+            lastDayStatus.submitted = true;
+            if (!lastDayStatus.values) lastDayStatus.values = [];
+            MANUAL_IDX.forEach(function(idx, i){ lastDayStatus.values[idx] = checklist[i]; });
+          }
           maybeBuildReport();
         } else {
           setSubmitButtonState(false);
