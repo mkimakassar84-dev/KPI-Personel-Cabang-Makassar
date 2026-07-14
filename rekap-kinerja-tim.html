@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rekap Kinerja Tim - Cabang Makassar</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root{
     --navy:#1c2733;
@@ -50,6 +51,29 @@
     padding:10px 16px; font-size:13px; font-weight:700; cursor:pointer;
   }
   .refresh-btn:active{ background:var(--blue-dark); }
+  .wa-share-btn-dash{
+    width:100%; margin-top:10px; padding:12px; border-radius:12px; border:none;
+    background:#25D366; color:#fff; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  .wa-share-btn-dash:active{ background:#1ea952; }
+  .wa-share-btn-dash:disabled{ background:#a9d9bd; cursor:default; }
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%);
+    background:var(--navy); color:#fff; padding:12px 18px; border-radius:12px;
+    font-size:13px; z-index:70; box-shadow:0 6px 16px rgba(0,0,0,.2); max-width:90%; text-align:center;
+    opacity:0; transition:.25s;
+  }
+  .toast.show{ opacity:1; }
+  .toast.err{ background:var(--red); }
+  .toast.okc{ background:var(--green); }
+  .perf-banner{
+    text-align:center; font-size:12.5px; color:var(--navy); background:#fff;
+    border-radius:14px; padding:10px 16px; margin-bottom:14px; box-shadow:0 4px 14px rgba(20,30,45,.06);
+  }
+  .perf-banner strong{ letter-spacing:.3px; }
+  .perf-banner.sb strong{ color:var(--green); }
+  .perf-banner.b strong{ color:var(--blue); }
+  .perf-banner.c strong{ color:#a97417; }
   .last-update{ font-size:11px; color:var(--gray); margin-top:6px; }
 
   .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:18px; }
@@ -60,6 +84,7 @@
   .kpi .lbl{ font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:#7a8794; font-weight:700; margin-bottom:8px; }
   .kpi .val{ font-size:28px; font-weight:800; }
   .kpi .val.small{ font-size:18px; }
+  .kpi .val.tiny{ font-size:13px; line-height:1.35; font-weight:700; word-break:break-word; }
   .kpi .delta{ font-size:12px; font-weight:700; margin-top:4px; }
   .kpi .delta.up{ color:var(--green); }
   .kpi .delta.down{ color:var(--red); }
@@ -163,6 +188,7 @@
     .kpi{ padding:13px 14px; border-radius:14px; }
     .kpi .val{ font-size:22px; }
     .kpi .val.small{ font-size:14px; line-height:1.3; }
+    .kpi .val.tiny{ font-size:11.5px; line-height:1.3; }
     .kpi .lbl{ font-size:10px; }
 
     .panel{ padding:15px 14px 16px; border-radius:14px; }
@@ -219,6 +245,7 @@
   </div>
   <div class="last-update" id="last-update"></div>
   <div class="auto-refresh-note">Data diperbarui saat halaman dibuka atau tombol "Muat Ulang" ditekan</div>
+  <button class="wa-share-btn-dash" id="btn-wa-share-dash">📤 Bagikan Halaman Ini ke WhatsApp</button>
 
   <div id="content"></div>
 </div>
@@ -431,16 +458,20 @@ function renderPerson(nama, bulan, detail, trend){
     deltaHtml = '<div class="delta ' + cls + '">' + sign + diff + '% vs bulan lalu</div>';
   }
 
+  var perfLbl = getPerformanceLabelDash(detail.monthPercent);
+
   var html = '';
   if (!anyData) {
     html += '<div class="empty-hint">Belum ada data kinerja untuk ' + nama + ' di bulan ' + monthLabel(bulan) + '. Tabel & grafik di bawah akan otomatis terisi begitu form harian mulai diisi.</div>';
   }
 
+  html += '<div class="perf-banner ' + perfLbl.cls + '">Predikat Bulan Ini: <strong>' + perfLbl.text + '</strong></div>';
+
   html += '<div class="cards">'
     + '<div class="kpi"><div class="lbl">Kepatuhan Bulan Ini</div><div class="val">' + detail.monthPercent + '%</div>' + deltaHtml + '</div>'
     + '<div class="kpi"><div class="lbl">Hari Kerja Terhitung</div><div class="val">' + detail.countedDays + '</div></div>'
-    + '<div class="kpi"><div class="lbl">Indikator Terlemah</div><div class="val small">' + weakestIndicator(detail.indicatorStats) + '</div></div>'
-    + '<div class="kpi"><div class="lbl">Indikator Terkuat</div><div class="val small">' + strongestIndicator(detail.indicatorStats) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Indikator Terlemah</div><div class="val tiny">' + weakestIndicator(detail.indicatorStats) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Indikator Terkuat</div><div class="val tiny">' + strongestIndicator(detail.indicatorStats) + '</div></div>'
     + '</div>';
 
   html += '<div class="two-col">'
@@ -557,15 +588,21 @@ function renderPerson(nama, bulan, detail, trend){
   });
 }
 
+function getPerformanceLabelDash(percent){
+  if (percent >= 90) return { text: "SANGAT BAIK", cls: "sb" };
+  if (percent >= 75) return { text: "BAIK", cls: "b" };
+  return { text: "CUKUP", cls: "c" };
+}
+
 function weakestIndicator(stats){
   if (!stats.length) return "-";
   var s = stats.slice().sort(function(a,b){return a.percent-b.percent;})[0];
-  return s.label.length>22 ? s.label.slice(0,20)+"…" : s.label + " (" + s.percent + "%)";
+  return s.label + " (" + s.percent + "%)";
 }
 function strongestIndicator(stats){
   if (!stats.length) return "-";
   var s = stats.slice().sort(function(a,b){return b.percent-a.percent;})[0];
-  return s.label.length>22 ? s.label.slice(0,20)+"…" : s.label + " (" + s.percent + "%)";
+  return s.label + " (" + s.percent + "%)";
 }
 
 function parseEvidenceDash(raw){
@@ -661,6 +698,66 @@ function prefetchAllPersons(){
     idleFn(prefetchNext);
   }
   idleFn(prefetchNext);
+}
+
+var BASE_SITE_URL = "https://mkimakassar84-dev.github.io/KPI-Personel-Cabang-Makassar/";
+
+function currentViewCaption(){
+  var nama = document.getElementById("f-nama").value;
+  var bulan = document.getElementById("f-bulan").value || currentYearMonth();
+  var bulanTxt = monthLabel(bulan);
+  if (nama === "__OVERVIEW__") {
+    return { caption: "Rekap Perbandingan Kinerja Tim - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar", link: "" };
+  }
+  if (nama === "MAKASSAR") {
+    return { caption: "Rekap Kinerja Cabang MAKASSAR - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar\n" + BASE_SITE_URL + "input-makassar.html", link: BASE_SITE_URL + "input-makassar.html" };
+  }
+  return { caption: "Rekap Kinerja " + nama + " - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar\nCek detail: " + BASE_SITE_URL + "input-" + nama.toLowerCase() + ".html?bm=1", link: BASE_SITE_URL + "input-" + nama.toLowerCase() + ".html?bm=1" };
+}
+
+document.getElementById("btn-wa-share-dash").addEventListener("click", async function(){
+  var btn = this;
+  var content = document.getElementById("content");
+  if (!content || !content.innerHTML.trim()) { showToastDash("Tunggu data selesai dimuat dulu", "err"); return; }
+
+  btn.disabled = true;
+  var origText = btn.textContent;
+  btn.textContent = "Menyiapkan gambar...";
+
+  try {
+    var canvas = await html2canvas(content, { backgroundColor: "#eef1f5", scale: 2, useCORS: true });
+    canvas.toBlob(async function(blob){
+      btn.disabled = false;
+      btn.textContent = origText;
+      if (!blob) { showToastDash("Gagal membuat gambar", "err"); return; }
+      var info = currentViewCaption();
+      var fileName = "rekap-kinerja-" + Date.now() + ".png";
+      var file = new File([blob], fileName, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file], text: info.caption }); } catch(e){}
+      } else {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+        showToastDash("Browser ini tidak mendukung share langsung - gambar sudah diunduh", "err");
+      }
+    }, "image/png", 0.95);
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = origText;
+    showToastDash("Gagal membuat gambar halaman", "err");
+  }
+});
+
+function showToastDash(msg, type){
+  var t = document.createElement("div");
+  t.className = "toast" + (type ? " " + type : "");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function(){ t.classList.add("show"); });
+  setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.remove(); }, 300); }, 2600);
 }
 
 initFilters();

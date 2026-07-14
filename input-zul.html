@@ -27,6 +27,13 @@
   }
   .topbar .nama{font-size:19px; font-weight:700; margin-bottom:2px;}
   .topbar .jabatan{font-size:12px; opacity:.85; margin-bottom:4px;}
+  .perf-badge{
+    display:inline-block; font-size:10px; font-weight:800; letter-spacing:.3px;
+    padding:3px 9px; border-radius:20px; vertical-align:middle; margin-left:4px;
+  }
+  .perf-badge.sb{ background:#e4f6ea; color:var(--green); }
+  .perf-badge.b{ background:#eaf1fb; color:var(--blue); }
+  .perf-badge.c{ background:#fdf3e2; color:#a97417; }
   .topbar .sub{opacity:.6; font-size:11px;}
   .wrap{max-width:480px; margin:-26px auto 0; padding:0 16px 100px;}
   .card{
@@ -99,6 +106,7 @@
   .field-item:last-child{ margin-bottom:0; }
   .field-label{ font-size:11px; color:var(--blue-dark); font-weight:700; margin-bottom:5px; display:flex; align-items:center; gap:4px; }
   .field-label .req{ color:var(--red); }
+  .field-label .opt{ color:var(--gray); font-size:10px; font-weight:600; }
   .field-item input[type=text], .field-item select{
     width:100%; padding:10px 12px; border-radius:10px; border:1.5px solid #dde2e8;
     font-size:13px; font-family:inherit; background:#fbfcfd; color:var(--navy);
@@ -281,12 +289,14 @@ function loadForm(){
 function renderShell(cfg){
   var displayName = (cfg.fullName && cfg.fullName.trim()) ? cfg.fullName : NAMA;
   var jabatan = cfg.jabatan || "";
+  var urlParams = new URLSearchParams(window.location.search);
+  window.__bmViewMode = urlParams.get("bm") === "1";
 
   var html = ''
   + '<div class="topbar">'
-  +   '<div class="nama">' + displayName + '</div>'
+  +   '<div class="nama">' + displayName + ' <span id="perf-badge" class="perf-badge" style="display:none"></span></div>'
   +   (jabatan ? '<div class="jabatan">' + jabatan + '</div>' : '')
-  +   '<div class="sub">PT. Mitra Kabel Indonesia &mdash; Cabang Makassar</div>'
+  +   '<div class="sub">PT. Mitra Kabel Indonesia &mdash; Cabang Makassar' + (window.__bmViewMode ? ' &middot; Mode Tinjau (baca saja)' : '') + '</div>'
   + '</div>'
   + '<div class="wrap">'
   +   '<div class="card">'
@@ -299,12 +309,36 @@ function renderShell(cfg){
   + '<div class="submitbar"><div id="draft-indicator" class="draft-indicator">Tersimpan otomatis ✓</div><button class="submit" id="btn-submit">Simpan Kinerja Hari Ini</button></div>';
 
   app.innerHTML = html;
+  loadPerformanceBadge();
   document.getElementById("f-tanggal").addEventListener("change", function(){
     loadDay(this.value);
   });
 }
 
 var DAY_CACHE = {};
+
+function getPerformanceLabel(percent){
+  if (percent >= 90) return { text: "SANGAT BAIK", cls: "sb" };
+  if (percent >= 75) return { text: "BAIK", cls: "b" };
+  return { text: "CUKUP", cls: "c" };
+}
+
+function loadPerformanceBadge(){
+  var now = new Date();
+  var ym = now.getFullYear() + "-" + ("0"+(now.getMonth()+1)).slice(-2);
+  fetch(WEBAPP_URL + "?action=monthDetail&nama=" + encodeURIComponent(NAMA) + "&month=" + ym)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (d.error) return;
+      var badge = document.getElementById("perf-badge");
+      if (!badge) return;
+      var lbl = getPerformanceLabel(d.monthPercent);
+      badge.textContent = lbl.text;
+      badge.className = "perf-badge " + lbl.cls;
+      badge.style.display = "inline-block";
+    })
+    .catch(function(){});
+}
 
 function loadDay(tanggal, force){
   var area = document.getElementById("dynamic-area");
@@ -362,22 +396,24 @@ function renderEvidenceView(raw){
 function fieldInputHtml(manualIdx, rowIdx, fi, f, isDynamicEksp){
   var id = "f-" + manualIdx + "-" + rowIdx + "-" + fi;
   var inner;
+  var optAttr = f.optional ? ' data-optional="1"' : '';
+  var reqMark = f.optional ? '<span class="opt">(opsional)</span>' : '<span class="req">*</span>';
   if (f.type === "select") {
     var opts = ['<option value="">Pilih...</option>'].concat(f.options.map(function(o){ return '<option value="' + o + '">' + o + '</option>'; }));
-    inner = '<select class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="select">' + opts.join("") + '</select>';
+    inner = '<select class="field-input" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="select">' + opts.join("") + '</select>';
   } else if (f.type === "rupiah") {
-    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="rupiah" inputmode="numeric" placeholder="Rp 0">';
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="rupiah" inputmode="numeric" placeholder="Rp 0">';
   } else if (f.type === "tel") {
-    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx">';
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx">';
   } else if (f.type === "number") {
     var extraClass = (isDynamicEksp && f.label === "Jumlah Ekspedisi Didatangi") ? " ekspedisi-count-input" : "";
-    inner = '<input type="text" class="field-input' + extraClass + '" id="' + id + '" data-key="' + f.label + '" data-type="number" inputmode="numeric" placeholder="0">';
+    inner = '<input type="text" class="field-input' + extraClass + '" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="number" inputmode="numeric" placeholder="0">';
   } else if (f.type === "jam") {
-    inner = '<input type="text" class="field-input jam-field" id="' + id + '" data-key="' + f.label + '" data-type="jam" inputmode="numeric" maxlength="5" placeholder="08:00">';
+    inner = '<input type="text" class="field-input jam-field" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="jam" inputmode="numeric" maxlength="5" placeholder="08:00">';
   } else {
-    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="text" placeholder="' + f.label + '">';
+    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="text" placeholder="' + f.label + '">';
   }
-  return '<div class="field-item"><div class="field-label"><span class="req">*</span> ' + f.label + '</div>' + inner + '</div>';
+  return '<div class="field-item"><div class="field-label">' + reqMark + ' ' + f.label + '</div>' + inner + '</div>';
 }
 
 function buildRowHtml(manualIdx, rowIdx, defs, removable, isDynamicEksp){
@@ -528,8 +564,9 @@ function collectFieldsValue(manualIdx){
   var obj = {}; var complete = true; var any = false;
   inputs2.forEach(function(inp){
     var v = inp.value.trim();
+    var isOptional = inp.getAttribute('data-optional') === '1';
     if (v) any = true;
-    if (!v) complete = false;
+    if (!v && !isOptional) complete = false;
     obj[inp.getAttribute('data-key')] = v;
   });
   if (!any) return { ok:true, json:"", count:0 };
@@ -540,7 +577,7 @@ function collectFieldsValue(manualIdx){
 function renderDynamic(tanggal, status){
   var labels = cfgCache.labels;
   var manualLabels = labels.slice(2);
-  var locked = status.submitted;
+  var locked = status.submitted || window.__bmViewMode;
   var area = document.getElementById("dynamic-area");
   var btn = document.getElementById("btn-submit");
 
