@@ -842,13 +842,24 @@ function openDayModal(nama, d, labels){
     var v = d.values[i];
     var evi = (d.evidence && d.evidence[i]) ? d.evidence[i] : "";
     var badge = !d.isWorkday ? '<span class="daybadge na">-</span>' : (v ? '<span class="daybadge ok">Ya</span>' : '<span class="daybadge low">Tidak</span>');
-    var hasEvidence = canShowEvidence && d.isWorkday && v && evi;
 
-    if (!hasEvidence) {
+    var isDatang = /absen datang/i.test(lbl);
+    var isPulang = /absen pulang/i.test(lbl);
+    var jamHtml = "";
+    if (d.isWorkday && isDatang && d.jamDatang) {
+      jamHtml = '<div class="ev-row"><span class="ev-k">Jam Datang</span><span class="ev-v">' + d.jamDatang + '</span></div>';
+    } else if (d.isWorkday && isPulang && d.jamPulang) {
+      jamHtml = '<div class="ev-row"><span class="ev-k">Jam Pulang</span><span class="ev-v">' + d.jamPulang + '</span></div>';
+    }
+
+    var hasEvidence = canShowEvidence && d.isWorkday && v && evi;
+    var hasJam = !!jamHtml;
+
+    if (!hasEvidence && !hasJam) {
       return '<div class="mitem-block"><div class="mitem"><span>' + lbl + '</span>' + badge + '</div></div>';
     }
 
-    var eviHtml = renderEvidenceHtml(evi);
+    var eviHtml = hasEvidence ? renderEvidenceHtml(evi) : jamHtml;
     return '<div class="mitem-block clickable" data-idx="' + i + '">'
       + '<div class="mitem"><span><span class="chev">&#9656;</span>' + lbl + '</span>' + badge + '</div>'
       + '<div class="mitem-evi">' + eviHtml + '</div>'
