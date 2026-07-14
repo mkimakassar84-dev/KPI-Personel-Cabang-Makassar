@@ -1210,10 +1210,22 @@ function showToastDash(msg, type){
 }
 
 initFilters();
-load();
-if (!(new URLSearchParams(window.location.search).get("lock") === "1")) {
-  setTimeout(prefetchAllPersons, 800);
+
+function bootLoad(){
+  // Chart.js dimuat dengan atribut defer, jadi bisa saja belum siap saat kode ini
+  // pertama jalan (terutama saat render instan dari cache tersimpan). Tunggu sampai
+  // Chart.js benar-benar siap supaya grafik Tren & Indikator langsung tampil,
+  // tidak perlu menunggu tombol "Muat Ulang" ditekan.
+  if (window.Chart) {
+    load();
+    if (!(new URLSearchParams(window.location.search).get("lock") === "1")) {
+      setTimeout(prefetchAllPersons, 800);
+    }
+  } else {
+    setTimeout(bootLoad, 30);
+  }
 }
+bootLoad();
 </script>
 </body>
 </html>
