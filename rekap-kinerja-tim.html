@@ -718,6 +718,30 @@ function getPerformanceLabelDash(percent){
   return { text: "CUKUP", cls: "c" };
 }
 
+function parseTimeToMinutes_(t){
+  var m = /^(\d{1,2}):(\d{2})/.exec(String(t||""));
+  if (!m) return null;
+  return parseInt(m[1],10)*60 + parseInt(m[2],10);
+}
+
+function computeTimeMargins_(days){
+  // Skor margin waktu — dipakai HANYA sebagai pemecah dasi internal, tidak pernah ditampilkan ke user.
+  // Datang jauh sebelum 08.15 = margin besar (baik). Pulang mepet 16.46 = margin kecil (kurang baik) walau tetap patuh.
+  var DATANG_CUTOFF = 8*60+15;
+  var PULANG_CUTOFF = 16*60+45;
+  var datangMargins = [];
+  var pulangMargins = [];
+  (days || []).forEach(function(d){
+    if (!d.isWorkday) return;
+    var jd = parseTimeToMinutes_(d.jamDatang);
+    if (jd !== null) datangMargins.push(DATANG_CUTOFF - jd); // makin besar = makin awal = makin baik
+    var jp = parseTimeToMinutes_(d.jamPulang);
+    if (jp !== null) pulangMargins.push(jp - PULANG_CUTOFF); // makin besar = makin telat pulang = makin baik
+  });
+  function avg(arr){ return arr.length ? arr.reduce(function(s,v){return s+v;},0)/arr.length : null; }
+  return { datangAvg: avg(datangMargins), pulangAvg: avg(pulangMargins) };
+}
+
 function computeIndicatorAccumulation(days){
   // Hitung akumulasi TRUE per indikator (0-9) langsung dari data harian,
   // dengan denominator (hari yang berlaku) yang presisi per indikator —
@@ -738,12 +762,17 @@ function computeIndicatorAccumulation(days){
 
 function rankIndicators(stats, days){
   var acc = computeIndicatorAccumulation(days);
+  var margins = computeTimeMargins_(days);
   return stats.map(function(s, i){
+    var marginScore = null;
+    if (/absen datang/i.test(s.label)) marginScore = margins.datangAvg;
+    else if (/absen pulang/i.test(s.label)) marginScore = margins.pulangAvg;
     return {
       label: s.label,
       percent: s.percent,
       trueCount: acc.trueCount[i] || 0,
-      applicableCount: acc.applicableCount[i] || 0
+      applicableCount: acc.applicableCount[i] || 0,
+      marginScore: marginScore
     };
   });
 }
@@ -753,7 +782,11 @@ function weakestIndicator(stats, days){
   var enriched = rankIndicators(stats, days);
   var sorted = enriched.slice().sort(function(a, b){
     if (a.percent !== b.percent) return a.percent - b.percent; // persentase terendah dulu
-    return a.trueCount - b.trueCount; // dasi: akumulasi hari patuh paling sedikit = paling lemah
+    if (a.trueCount !== b.trueCount) return a.trueCount - b.trueCount; // dasi: akumulasi hari patuh paling sedikit = paling lemah
+    if (a.marginScore != null && b.marginScore != null && a.marginScore !== b.marginScore) {
+      return a.marginScore - b.marginScore; // dasi lanjutan: margin waktu paling mepet = paling lemah
+    }
+    return 0;
   });
   return sorted[0].label + " (" + sorted[0].percent + "%)";
 }
@@ -762,7 +795,11 @@ function strongestIndicator(stats, days){
   var enriched = rankIndicators(stats, days);
   var sorted = enriched.slice().sort(function(a, b){
     if (a.percent !== b.percent) return b.percent - a.percent; // persentase tertinggi dulu
-    return b.trueCount - a.trueCount; // dasi: akumulasi hari patuh paling banyak = paling kuat
+    if (a.trueCount !== b.trueCount) return b.trueCount - a.trueCount; // dasi: akumulasi hari patuh paling banyak = paling kuat
+    if (a.marginScore != null && b.marginScore != null && a.marginScore !== b.marginScore) {
+      return b.marginScore - a.marginScore; // dasi lanjutan: margin waktu paling lebar = paling kuat
+    }
+    return 0;
   });
   return sorted[0].label + " (" + sorted[0].percent + "%)";
 }
