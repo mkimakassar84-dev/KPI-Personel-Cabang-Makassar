@@ -509,7 +509,7 @@ function renderOverview(list, bulan){
       interaction:{ mode:"nearest", intersect:false },
       onHover: function(evt, elements, chart){ chart.canvas.style.cursor = elements.length ? "pointer" : "default"; },
       scales:{
-        y:{ beginAtZero:true, max:110, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobile?10:12 } } },
+        y:{ beginAtZero:true, max:110, afterBuildTicks:function(scale){ scale.ticks = scale.ticks.filter(function(t){ return t.value<=100; }); }, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobile?10:12 } } },
         x:{ ticks:{ font:{ size: isMobile?9:11 }, maxRotation:0, minRotation:0, autoSkip:false } }
       },
       plugins:{
@@ -697,7 +697,7 @@ function renderPerson(nama, bulan, detail, trend){
       layout:{ padding:{ top: 14, right: 8 } },
       interaction:{ mode:"nearest", intersect:false },
       scales:{
-        y:{ beginAtZero:true, max:110, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobileDaily?10:12 } } },
+        y:{ beginAtZero:true, max:110, afterBuildTicks:function(scale){ scale.ticks = scale.ticks.filter(function(t){ return t.value<=100; }); }, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobileDaily?10:12 } } },
         x:{ ticks:{ font:{ size: isMobileDaily?9:11 }, maxRotation:0, autoSkip:true, maxTicksLimit: isMobileDaily?10:16 } }
       },
       plugins:{
@@ -743,7 +743,7 @@ function renderPerson(nama, bulan, detail, trend){
       layout:{ padding:{ top: 14, right: 8 } },
       interaction:{ mode:"nearest", intersect:false },
       scales:{
-        y:{ beginAtZero:true, max:110, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobileTrend?10:12 } } },
+        y:{ beginAtZero:true, max:110, afterBuildTicks:function(scale){ scale.ticks = scale.ticks.filter(function(t){ return t.value<=100; }); }, ticks:{ stepSize:20, callback:function(v){return v+"%";}, font:{ size: isMobileTrend?10:12 } } },
         x:{ ticks:{ font:{ size: isMobileTrend?10:12 } } }
       },
       plugins:{
@@ -1219,11 +1219,11 @@ function buildPersonImage(nama, bulan, detail){
 
   // trend chart (reuse live Chart.js canvas)
   ctx.fillStyle = "#1c2733"; ctx.font = "700 14px -apple-system, Roboto, Arial, sans-serif";
-  ctx.fillText("Tren Kepatuhan Bulanan", padX, y+18);
+  ctx.fillText("Tren Kepatuhan Harian", padX, y+18);
   y += chartTitleH;
   ctx.fillStyle = "#fff";
   roundRectDash(ctx, padX, y, W-2*padX, trendChartH, 14); ctx.fill();
-  var trendCanvas = document.getElementById("chart-trend");
+  var trendCanvas = document.getElementById("chart-daily-trend");
   if (trendCanvas && trendCanvas.width > 0) {
     var padT = 14;
     ctx.drawImage(trendCanvas, padX+padT, y+padT, W-2*padX-2*padT, trendChartH-2*padT);
