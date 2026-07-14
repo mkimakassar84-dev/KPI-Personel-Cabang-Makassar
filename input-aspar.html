@@ -58,6 +58,17 @@
   }
   .item:last-child{border-bottom:none;}
   .item-row{ display:flex; align-items:center; justify-content:space-between; }
+  .item-row-yn{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .item[data-warn="1"]{ background:#fffaf0; margin:0 -18px; padding:12px 18px; border-radius:10px; }
+  .yn-group{ display:flex; gap:6px; flex:0 0 auto; }
+  .yn-btn{
+    min-width:58px; padding:9px 12px; border-radius:10px; border:1.5px solid #dde2e8;
+    background:#fbfcfd; color:#8b94a0; font-size:12px; font-weight:700; letter-spacing:.3px;
+    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:.15s;
+  }
+  .yn-btn.yn-tidak.active{ background:#fdecea; border-color:var(--red); color:var(--red); }
+  .yn-btn.yn-ya.active{ background:#e4f6ea; border-color:var(--green); color:var(--green); }
+  .warn-hint{ font-size:11px; color:#a05a00; margin-top:4px; display:flex; align-items:center; gap:4px; }
   .item .txt{font-size:14px; padding-right:12px; line-height:1.35;}
   .item .num{
     display:inline-block; width:20px; height:20px; border-radius:50%; background:#eef1f5;
@@ -138,6 +149,24 @@
   .toast.show{opacity:1;}
   .toast.err{background:var(--red);}
   .toast.okc{background:var(--green);}
+  .confirm-overlay{
+    position:fixed; inset:0; background:rgba(20,30,45,.5); z-index:60;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+    opacity:0; transition:opacity .2s ease;
+  }
+  .confirm-overlay.show{ opacity:1; }
+  .confirm-box{
+    background:#fff; border-radius:18px; padding:22px 20px; max-width:340px; width:100%;
+    box-shadow:0 12px 32px rgba(0,0,0,.25); transform:scale(.95); transition:transform .2s ease;
+  }
+  .confirm-overlay.show .confirm-box{ transform:scale(1); }
+  .confirm-msg{ font-size:15px; font-weight:600; color:var(--navy); text-align:center; margin-bottom:18px; line-height:1.4; }
+  .confirm-actions{ display:flex; gap:10px; }
+  .confirm-actions button{
+    flex:1; padding:13px; border-radius:12px; border:none; font-size:14px; font-weight:700; cursor:pointer;
+  }
+  .confirm-cancel{ background:#eef1f5; color:var(--navy); }
+  .confirm-ok{ background:var(--navy); color:#fff; }
   .locked-banner{
     background:#fff3e0; color:#a05a00; font-size:12px; font-weight:600; border-radius:12px;
     padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; gap:8px;
@@ -159,7 +188,7 @@ var BATAS_DATANG = "08:15";
 var BATAS_PULANG = "16:45";
 
 // manualIndex 0..7 = indikator item 3..10 (labels[2..9])
-var EXTRA_FIELDS = {"1": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan", "type": "number"}, {"label": "Total Quantity", "type": "number"}, {"label": "Total Koli", "type": "number"}]}, "6": {"repeatable": false, "fields": [{"label": "Jam Buka Kantor", "type": "text"}, {"label": "Jam Tutup Kantor", "type": "text"}]}};
+var EXTRA_FIELDS = {"1": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan", "type": "number"}, {"label": "Total Quantity", "type": "number"}, {"label": "Total Koli", "type": "number"}]}, "6": {"repeatable": false, "warnIfEmpty": true, "fields": [{"label": "Jam Buka Kantor", "type": "jam"}, {"label": "Jam Tutup Kantor", "type": "jam"}]}};
 var AUTO_LOCKED = [0];
 var SKIP_EVIDENCE = false;
 var SHARED_PEER_IDX = [6]; // array of manualIndex yang nilainya bisa datang dari peer
@@ -183,6 +212,29 @@ function showToast(msg, type){
     t.classList.remove("show");
     setTimeout(function(){ t.remove(); }, 300);
   }, 2600);
+}
+
+function showConfirmDialog(message, onConfirm){
+  var overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.innerHTML = '<div class="confirm-box">'
+    + '<div class="confirm-msg">' + message + '</div>'
+    + '<div class="confirm-actions">'
+    +   '<button type="button" class="confirm-cancel">Batal</button>'
+    +   '<button type="button" class="confirm-ok">Ya, Simpan</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){ overlay.classList.add("show"); });
+  function close(){
+    overlay.classList.remove("show");
+    setTimeout(function(){ overlay.remove(); }, 200);
+  }
+  overlay.querySelector(".confirm-cancel").addEventListener("click", close);
+  overlay.addEventListener("click", function(e){ if (e.target === overlay) close(); });
+  overlay.querySelector(".confirm-ok").addEventListener("click", function(){
+    close();
+    onConfirm();
+  });
 }
 
 function formatJamInput(el){
@@ -307,7 +359,7 @@ function renderEvidenceView(raw){
   return '<div class="evidence-view">' + rowsHtml(parsed) + '</div>';
 }
 
-function fieldInputHtml(manualIdx, rowIdx, fi, f){
+function fieldInputHtml(manualIdx, rowIdx, fi, f, isDynamicEksp){
   var id = "f-" + manualIdx + "-" + rowIdx + "-" + fi;
   var inner;
   if (f.type === "select") {
@@ -318,17 +370,21 @@ function fieldInputHtml(manualIdx, rowIdx, fi, f){
   } else if (f.type === "tel") {
     inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="tel" inputmode="tel" placeholder="08xx-xxxx-xxxx">';
   } else if (f.type === "number") {
-    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="number" inputmode="numeric" placeholder="0">';
+    var extraClass = (isDynamicEksp && f.label === "Jumlah Ekspedisi Didatangi") ? " ekspedisi-count-input" : "";
+    inner = '<input type="text" class="field-input' + extraClass + '" id="' + id + '" data-key="' + f.label + '" data-type="number" inputmode="numeric" placeholder="0">';
+  } else if (f.type === "jam") {
+    inner = '<input type="text" class="field-input jam-field" id="' + id + '" data-key="' + f.label + '" data-type="jam" inputmode="numeric" maxlength="5" placeholder="08:00">';
   } else {
     inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '" data-type="text" placeholder="' + f.label + '">';
   }
   return '<div class="field-item"><div class="field-label"><span class="req">*</span> ' + f.label + '</div>' + inner + '</div>';
 }
 
-function buildRowHtml(manualIdx, rowIdx, defs, removable){
-  var fieldsHtml = defs.map(function(f, fi){ return fieldInputHtml(manualIdx, rowIdx, fi, f); }).join("");
+function buildRowHtml(manualIdx, rowIdx, defs, removable, isDynamicEksp){
+  var fieldsHtml = defs.map(function(f, fi){ return fieldInputHtml(manualIdx, rowIdx, fi, f, isDynamicEksp); }).join("");
+  var dynamicContainer = isDynamicEksp ? '<div class="ekspedisi-names"></div>' : '';
   var removeBtn = removable ? '<button type="button" class="remove-row-btn">Hapus baris ini</button>' : '';
-  return '<div class="row-card" data-row="' + rowIdx + '">' + fieldsHtml + removeBtn + '</div>';
+  return '<div class="row-card" data-row="' + rowIdx + '">' + fieldsHtml + dynamicContainer + removeBtn + '</div>';
 }
 
 function buildFieldsHtml(manualIdx){
@@ -340,15 +396,45 @@ function buildFieldsHtml(manualIdx){
       + '<input type="text" class="field-input" data-key="Keterangan" maxlength="300" placeholder="Tulis keterangan singkat...">'
       + '</div></div></div>';
   }
-  var rowHtml = buildRowHtml(manualIdx, 0, group.fields, false);
-  var addBtn = group.repeatable ? '<button type="button" class="add-row-btn" data-idx="' + manualIdx + '">+ Tambah Baris</button>' : '';
+  var rowHtml = buildRowHtml(manualIdx, 0, group.fields, false, !!group.dynamicEkspedisi);
+  var addBtn = group.repeatable ? '<button type="button" class="add-row-btn" data-idx="' + manualIdx + '">+ Tambah Baris' + (group.dynamicEkspedisi ? ' (Ritase Berikutnya)' : '') + '</button>' : '';
   return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="' + (group.repeatable?'1':'0') + '">' + rowHtml + '</div>' + addBtn;
+}
+
+function wireEkspedisiCount(scopeEl){
+  scopeEl.querySelectorAll('.ekspedisi-count-input').forEach(function(countInp){
+    if (countInp.__wiredEksp) return;
+    countInp.__wiredEksp = true;
+    var rowCard = countInp.closest('.row-card');
+    var container = rowCard ? rowCard.querySelector('.ekspedisi-names') : null;
+    if (!container) return;
+    function regenerate(){
+      var n = parseInt(countInp.value, 10);
+      if (!n || n < 1) n = 0;
+      if (n > 15) n = 15;
+      var oldVals = Array.from(container.querySelectorAll('.field-input')).map(function(i){ return i.value; });
+      var html = '';
+      for (var k=0;k<n;k++){
+        html += '<div class="field-item"><div class="field-label"><span class="req">*</span> Nama Ekspedisi ' + (k+1) + '</div>'
+          + '<input type="text" class="field-input" data-key="Nama Ekspedisi ' + (k+1) + '" data-type="text" placeholder="Nama Ekspedisi ' + (k+1) + '"></div>';
+      }
+      container.innerHTML = html;
+      var newInputs = container.querySelectorAll('.field-input');
+      newInputs.forEach(function(inp, idx){ if (oldVals[idx]) inp.value = oldVals[idx]; });
+    }
+    countInp.addEventListener('input', regenerate);
+    regenerate();
+  });
 }
 
 function wireRowInputs(rowEl){
   rowEl.querySelectorAll('.field-input[data-type="rupiah"]').forEach(function(inp){
     inp.addEventListener('input', function(){ inp.value = formatRupiah(inp.value); });
   });
+  rowEl.querySelectorAll('.field-input[data-type="jam"]').forEach(function(inp){
+    formatJamInput(inp);
+  });
+  wireEkspedisiCount(rowEl);
   var removeBtn = rowEl.querySelector('.remove-row-btn');
   if (removeBtn) removeBtn.addEventListener('click', function(){ rowEl.remove(); });
 }
@@ -358,7 +444,7 @@ function addRow(manualIdx){
   var container = document.getElementById('rows-' + manualIdx);
   var rowIdx = container.querySelectorAll('.row-card').length;
   var wrapper = document.createElement('div');
-  wrapper.innerHTML = buildRowHtml(manualIdx, rowIdx, group.fields, true);
+  wrapper.innerHTML = buildRowHtml(manualIdx, rowIdx, group.fields, true, !!group.dynamicEkspedisi);
   var rowEl = wrapper.firstChild;
   container.appendChild(rowEl);
   wireRowInputs(rowEl);
@@ -373,12 +459,19 @@ function wireFieldsValidation(manualIdx, chk, wrap){
     wrap.querySelectorAll('.field-input[data-type="rupiah"]').forEach(function(inp){
       inp.addEventListener('input', function(){ inp.value = formatRupiah(inp.value); });
     });
+    wrap.querySelectorAll('.field-input[data-type="jam"]').forEach(function(inp){
+      formatJamInput(inp);
+    });
+    wireEkspedisiCount(wrap);
     return;
   }
   var inputs = wrap.querySelectorAll(".field-input");
   inputs.forEach(function(inp){
     if (inp.getAttribute("data-type") === "rupiah") {
       inp.addEventListener("input", function(){ inp.value = formatRupiah(inp.value); });
+    }
+    if (inp.getAttribute("data-type") === "jam") {
+      formatJamInput(inp);
     }
     inp.addEventListener("blur", checkFieldsComplete);
     inp.addEventListener("change", checkFieldsComplete);
@@ -523,11 +616,19 @@ function renderDynamic(tanggal, status){
         }
 
         var fieldsHtml = buildFieldsHtml(i);
-        return '<div class="item">'
-          + '<div class="item-row">'
+        var warnCfg = EXTRA_FIELDS[i] && EXTRA_FIELDS[i].warnIfEmpty;
+        var warnFlag = warnCfg ? ' data-warn="1"' : '';
+        var warnHtml = warnCfg ? ('<div class="warn-hint" id="warn-' + i + '" style="display:' + (v ? 'none' : 'flex') + '">⚠️ Sebaiknya diisi hari ini</div>') : '';
+        return '<div class="item"' + warnFlag + ' data-item-idx="' + i + '">'
+          + '<div class="item-row-yn">'
           +   '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
-          +   '<label class="switch"><input type="checkbox" class="chk-manual" data-idx="' + i + '"' + (v ? ' checked' : '') + '><span class="slider"></span></label>'
+          +   '<div class="yn-group">'
+          +     '<button type="button" class="yn-btn yn-tidak' + (!v ? ' active' : '') + '" data-idx="' + i + '" data-val="0">TIDAK</button>'
+          +     '<button type="button" class="yn-btn yn-ya' + (v ? ' active' : '') + '" data-idx="' + i + '" data-val="1">YA</button>'
+          +   '</div>'
+          +   '<input type="checkbox" class="chk-manual" data-idx="' + i + '"' + (v ? ' checked' : '') + ' style="display:none">'
           + '</div>'
+          + warnHtml
           + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + '</div>'
           + '</div>';
       }).join("")
@@ -558,7 +659,29 @@ function renderDynamic(tanggal, status){
       } else {
         wrap.classList.remove('show');
       }
+      var warnEl = document.getElementById('warn-' + i);
+      if (warnEl) warnEl.style.display = chk.checked ? 'none' : 'flex';
     });
+
+    var btnYa = document.querySelector('.yn-ya[data-idx="' + i + '"]');
+    var btnTidak = document.querySelector('.yn-tidak[data-idx="' + i + '"]');
+    if (btnYa && btnTidak) {
+      btnYa.addEventListener('click', function(){
+        if (chk.checked) return;
+        chk.checked = true;
+        btnYa.classList.add('active');
+        btnTidak.classList.remove('active');
+        chk.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      btnTidak.addEventListener('click', function(){
+        if (!chk.checked) return;
+        chk.checked = false;
+        btnTidak.classList.add('active');
+        btnYa.classList.remove('active');
+        chk.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
     wireFieldsValidation(i, chk, wrap);
   });
 
@@ -707,8 +830,10 @@ function renderDynamic(tanggal, status){
   btn.onclick = function(){
     var tanggal2 = document.getElementById("f-tanggal").value;
     if (!tanggal2){ showToast("Pilih tanggal dulu", "err"); return; }
-    if (elDatang.value && !isValidJam(elDatang.value)){ showToast("Format Jam Datang salah, contoh: 08:15", "err"); return; }
-    if (elPulang.value && !isValidJam(elPulang.value)){ showToast("Format Jam Pulang salah, contoh: 16:45", "err"); return; }
+    if (!elDatang.value){ showToast("Jam Datang wajib diisi sebelum menyimpan", "err"); elDatang.focus(); return; }
+    if (!elPulang.value){ showToast("Jam Pulang wajib diisi sebelum menyimpan", "err"); elPulang.focus(); return; }
+    if (!isValidJam(elDatang.value)){ showToast("Format Jam Datang salah, contoh: 08:15", "err"); return; }
+    if (!isValidJam(elPulang.value)){ showToast("Format Jam Pulang salah, contoh: 16:45", "err"); return; }
 
     var state = collectManualState(true);
     if (state.hasIncomplete) {
@@ -719,45 +844,47 @@ function renderDynamic(tanggal, status){
     var evidence = state.evidence;
     var belowMinRowsLabels = state.belowMinRowsLabels;
 
-    clearTimeout(draftTimer);
-    suppressDraftSave = true;
+    showConfirmDialog("Anda yakin untuk menginput kinerja hari ini?", function(){
+      clearTimeout(draftTimer);
+      suppressDraftSave = true;
 
-    btn.disabled = true;
-    btn.textContent = "Menyimpan...";
+      btn.disabled = true;
+      btn.textContent = "Menyimpan...";
 
-    fetch(WEBAPP_URL, {
-      method: "POST",
-      headers: {"Content-Type": "text/plain;charset=utf-8"},
-      body: JSON.stringify({
-        nama: NAMA,
-        tanggal: tanggal2,
-        jamDatang: elDatang.value || "",
-        jamPulang: elPulang.value || "",
-        checklist: checklist,
-        evidence: evidence
+      fetch(WEBAPP_URL, {
+        method: "POST",
+        headers: {"Content-Type": "text/plain;charset=utf-8"},
+        body: JSON.stringify({
+          nama: NAMA,
+          tanggal: tanggal2,
+          jamDatang: elDatang.value || "",
+          jamPulang: elPulang.value || "",
+          checklist: checklist,
+          evidence: evidence
+        })
       })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(res){
-      if (res.ok){
-        if (belowMinRowsLabels.length){
-          showToast("Tersimpan, tapi belum capai target: " + belowMinRowsLabels.join(", "), "err");
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (res.ok){
+          if (belowMinRowsLabels.length){
+            showToast("Tersimpan, tapi belum capai target: " + belowMinRowsLabels.join(", "), "err");
+          } else {
+            showToast("Tersimpan ke Google Sheet ✓", "okc");
+          }
+          loadDay(tanggal2, true);
         } else {
-          showToast("Tersimpan ke Google Sheet ✓", "okc");
+          suppressDraftSave = false;
+          btn.disabled = false;
+          btn.textContent = "Simpan Kinerja Hari Ini";
+          showToast(res.error || "Gagal menyimpan", "err");
         }
-        loadDay(tanggal2, true);
-      } else {
+      })
+      .catch(function(){
         suppressDraftSave = false;
         btn.disabled = false;
         btn.textContent = "Simpan Kinerja Hari Ini";
-        showToast(res.error || "Gagal menyimpan", "err");
-      }
-    })
-    .catch(function(){
-      suppressDraftSave = false;
-      btn.disabled = false;
-      btn.textContent = "Simpan Kinerja Hari Ini";
-      showToast("Tidak bisa terhubung ke server", "err");
+        showToast("Tidak bisa terhubung ke server", "err");
+      });
     });
   };
 }

@@ -336,7 +336,8 @@ function selectPerson(nama){
 function renderOverview(list, bulan){
   var sorted = list.slice().sort(function(a,b){ return b.percent - a.percent; });
   var avg = list.length ? Math.round(list.reduce(function(s,p){return s+p.percent;},0)/list.length) : 0;
-  var top = sorted[0], bottom = sorted[sorted.length-1];
+  var top = sorted[0];
+  var mostHours = list.slice().sort(function(a,b){ return (b.totalWorkHours||0) - (a.totalWorkHours||0); })[0];
   var anyData = list.some(function(p){ return p.percent > 0; });
 
   var html = '';
@@ -345,10 +346,10 @@ function renderOverview(list, bulan){
   }
 
   html += '<div class="cards">'
-    + '<div class="kpi"><div class="lbl">Rata-rata Kepatuhan Tim</div><div class="val">' + avg + '%</div></div>'
-    + '<div class="kpi"><div class="lbl">Personel Terbaik</div><div class="val small">' + (top ? top.nama + ' (' + top.percent + '%)' : '-') + '</div></div>'
-    + '<div class="kpi"><div class="lbl">Perlu Perhatian</div><div class="val small">' + (bottom ? bottom.nama + ' (' + bottom.percent + '%)' : '-') + '</div></div>'
     + '<div class="kpi"><div class="lbl">Bulan</div><div class="val small">' + monthLabel(bulan) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Rata-Rata Tingkat Kepatuhan</div><div class="val">' + avg + '%</div></div>'
+    + '<div class="kpi"><div class="lbl">Personel Terbaik dari Kinerja Harian</div><div class="val small">' + (top ? top.nama + ' (' + top.percent + '%)' : '-') + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Personel Jam Kerja Terbanyak</div><div class="val small">' + (mostHours && mostHours.totalWorkHours ? mostHours.nama + ' (' + mostHours.totalWorkHours + ' jam)' : '-') + '</div></div>'
     + '</div>';
 
   html += '<div class="panel">'
