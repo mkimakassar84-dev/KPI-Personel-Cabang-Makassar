@@ -585,8 +585,8 @@ function renderPerson(nama, bulan, detail, trend){
   html += '<div class="cards">'
     + '<div class="kpi"><div class="lbl">Kepatuhan Bulan Ini</div><div class="val">' + detail.monthPercent + '%</div>' + deltaHtml + '</div>'
     + '<div class="kpi"><div class="lbl">Hari Kerja Terhitung</div><div class="val">' + detail.countedDays + '</div></div>'
-    + '<div class="kpi"><div class="lbl">Indikator Terlemah</div><div class="val tiny">' + weakestIndicator(detail.indicatorStats) + '</div></div>'
-    + '<div class="kpi"><div class="lbl">Indikator Terkuat</div><div class="val tiny">' + strongestIndicator(detail.indicatorStats) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Indikator Terlemah</div><div class="val tiny">' + weakestIndicator(detail.indicatorStats, detail.days) + '</div></div>'
+    + '<div class="kpi"><div class="lbl">Indikator Terkuat</div><div class="val tiny">' + strongestIndicator(detail.indicatorStats, detail.days) + '</div></div>'
     + '</div>';
 
   html += '<div class="panel bm-note-panel">'
@@ -718,15 +718,53 @@ function getPerformanceLabelDash(percent){
   return { text: "CUKUP", cls: "c" };
 }
 
-function weakestIndicator(stats){
-  if (!stats.length) return "-";
-  var s = stats.slice().sort(function(a,b){return a.percent-b.percent;})[0];
-  return s.label + " (" + s.percent + "%)";
+function computeIndicatorAccumulation(days){
+  // Hitung akumulasi TRUE per indikator (0-9) langsung dari data harian,
+  // dengan denominator (hari yang berlaku) yang presisi per indikator —
+  // ini dipakai untuk memecah dasi (tie) ketika persentase dua indikator sama.
+  var n = 10;
+  var trueCount = new Array(n).fill(0);
+  var applicableCount = new Array(n).fill(0);
+  (days || []).forEach(function(d){
+    if (!d.isWorkday || !d.values) return;
+    for (var i = 0; i < n; i++){
+      if (d.values[i] === null || d.values[i] === undefined) continue;
+      applicableCount[i]++;
+      if (d.values[i]) trueCount[i]++;
+    }
+  });
+  return { trueCount: trueCount, applicableCount: applicableCount };
 }
-function strongestIndicator(stats){
+
+function rankIndicators(stats, days){
+  var acc = computeIndicatorAccumulation(days);
+  return stats.map(function(s, i){
+    return {
+      label: s.label,
+      percent: s.percent,
+      trueCount: acc.trueCount[i] || 0,
+      applicableCount: acc.applicableCount[i] || 0
+    };
+  });
+}
+
+function weakestIndicator(stats, days){
   if (!stats.length) return "-";
-  var s = stats.slice().sort(function(a,b){return b.percent-a.percent;})[0];
-  return s.label + " (" + s.percent + "%)";
+  var enriched = rankIndicators(stats, days);
+  var sorted = enriched.slice().sort(function(a, b){
+    if (a.percent !== b.percent) return a.percent - b.percent; // persentase terendah dulu
+    return a.trueCount - b.trueCount; // dasi: akumulasi hari patuh paling sedikit = paling lemah
+  });
+  return sorted[0].label + " (" + sorted[0].percent + "%)";
+}
+function strongestIndicator(stats, days){
+  if (!stats.length) return "-";
+  var enriched = rankIndicators(stats, days);
+  var sorted = enriched.slice().sort(function(a, b){
+    if (a.percent !== b.percent) return b.percent - a.percent; // persentase tertinggi dulu
+    return b.trueCount - a.trueCount; // dasi: akumulasi hari patuh paling banyak = paling kuat
+  });
+  return sorted[0].label + " (" + sorted[0].percent + "%)";
 }
 
 function parseEvidenceDash(raw){
@@ -991,8 +1029,8 @@ function buildPersonImage(nama, bulan, detail){
   var scale = 2, W = 760, padX = 28;
   var headerH = 108;
   var lbl = getPerformanceLabelDash(detail.monthPercent);
-  var weakTxt = weakestIndicator(detail.indicatorStats);
-  var strongTxt = strongestIndicator(detail.indicatorStats);
+  var weakTxt = weakestIndicator(detail.indicatorStats, detail.days);
+  var strongTxt = strongestIndicator(detail.indicatorStats, detail.days);
 
   var canvas = document.createElement("canvas");
   var tempCtx = canvas.getContext("2d");
