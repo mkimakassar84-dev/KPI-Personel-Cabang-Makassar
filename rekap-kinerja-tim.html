@@ -180,6 +180,7 @@
     resize:vertical; box-sizing:border-box; background:#fbfcfd;
   }
   .bm-note-textarea:focus{ outline:none; border-color:var(--blue); }
+  .bm-note-textarea.bm-note-readonly{ background:#f2f4f7; color:#5b6672; cursor:default; }
   .bm-note-actions{ display:flex; align-items:center; gap:12px; margin-top:10px; }
   .bm-note-save{
     border:none; border-radius:10px; background:var(--blue-dark); color:#fff;
@@ -303,11 +304,14 @@ function formatJamDetail(decimalHours){
 function pctClass(p){ return p>=80 ? "" : (p>=50 ? "mid" : "low"); }
 function badgeClass(p){ if (p===null) return "na"; return p>=80 ? "ok" : (p>=50 ? "mid" : "low"); }
 
+var IS_LOCKED_VIEW = false;
+
 function initFilters(){
   var sel = document.getElementById("f-nama");
   var urlParams = new URLSearchParams(window.location.search);
   var lockedNama = urlParams.get("nama");
   var isLocked = urlParams.get("lock") === "1" && lockedNama && PERSON_LIST.indexOf(lockedNama) !== -1;
+  IS_LOCKED_VIEW = isLocked;
 
   if (isLocked) {
     var o = document.createElement("option");
@@ -508,7 +512,19 @@ function wireBmNote(nama, bulan){
   var txt = document.getElementById("bm-note-text");
   var status = document.getElementById("bm-note-status");
   var btn = document.getElementById("btn-save-note");
-  if (!txt || !btn) return;
+  if (!txt) return;
+
+  if (IS_LOCKED_VIEW) {
+    // Personel hanya bisa membaca catatan BM, tidak bisa mengedit/menyimpan
+    txt.setAttribute("readonly", "readonly");
+    txt.classList.add("bm-note-readonly");
+    if (btn) btn.style.display = "none";
+    if (status) status.textContent = "";
+    if (!txt.value.trim()) txt.placeholder = "Belum ada catatan dari BM.";
+    return;
+  }
+
+  if (!btn) return;
   var localKey = "bmNote_" + nama + "_" + bulan;
   if (!txt.value) {
     try { var saved = localStorage.getItem(localKey); if (saved) txt.value = saved; } catch(e){}
@@ -974,14 +990,25 @@ function buildPersonImage(nama, bulan, detail){
   var sectionGap = 22;
   var chartTitleH = 26;
   var trendChartH = 220;
-  var indicatorChartH = 260;
-  var indicatorBlockH = 56 + (weakLines.length + strongLines.length) * 18 + 16;
+
+  // indicator table dimensions (computed up-front so the header/footer layout is exact)
+  var indHeaderH = 30;
+  var indRowH = 34;
+  var indTableH = indHeaderH + detail.indicatorStats.length * indRowH + 10;
+
+  // indicator summary block: computed as an explicit line sequence so the box height
+  // always matches exactly what gets drawn (fixes text overlapping the footer)
+  var padTopBlock = 24, padBottomBlock = 20;
+  var afterHariGap = 26, titleLineH = 18, bodyLineH = 18, midGap = 10;
+  var summaryContentH = afterHariGap + titleLineH + weakLines.length*bodyLineH + midGap + titleLineH + strongLines.length*bodyLineH;
+  var indicatorBlockH = padTopBlock + summaryContentH + padBottomBlock;
+
   var footerH = 36;
 
   var H = headerH + sectionGap
     + cardsH + sectionGap
     + chartTitleH + trendChartH + sectionGap
-    + chartTitleH + indicatorChartH + sectionGap
+    + chartTitleH + indTableH + sectionGap
     + indicatorBlockH + sectionGap
     + footerH;
 
@@ -1030,39 +1057,63 @@ function buildPersonImage(nama, bulan, detail){
   }
   y += trendChartH + sectionGap;
 
-  // indicator chart
+  // indicator table (10 indikator + persentase pencapaian — bukan grafik)
   ctx.fillStyle = "#1c2733"; ctx.font = "700 14px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillText("Kepatuhan per Indikator", padX, y+18);
   y += chartTitleH;
   ctx.fillStyle = "#fff";
-  roundRectDash(ctx, padX, y, W-2*padX, indicatorChartH, 14); ctx.fill();
-  var indCanvas = document.getElementById("chart-indicator");
-  if (indCanvas && indCanvas.width > 0) {
-    var padI = 14;
-    ctx.drawImage(indCanvas, padX+padI, y+padI, W-2*padX-2*padI, indicatorChartH-2*padI);
-  }
-  y += indicatorChartH + sectionGap;
+  roundRectDash(ctx, padX, y, W-2*padX, indTableH, 14); ctx.fill();
 
-  // indicator summary block
+  ctx.fillStyle = "#7a8794"; ctx.font = "700 10px -apple-system, Roboto, Arial, sans-serif";
+  ctx.fillText("INDIKATOR", padX+16, y+19);
+  ctx.textAlign = "right";
+  ctx.fillText("PENCAPAIAN", W-padX-16, y+19);
+  ctx.textAlign = "left";
+  ctx.strokeStyle = "#e6e9ee"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(padX+16, y+indHeaderH-6); ctx.lineTo(W-padX-16, y+indHeaderH-6); ctx.stroke();
+
+  var rowY = y + indHeaderH;
+  detail.indicatorStats.forEach(function(s, idx){
+    var rColor = s.percent>=80 ? "#3fae63" : (s.percent>=50 ? "#e0a53f" : "#e05a4e");
+    if (idx % 2 === 1) {
+      ctx.fillStyle = "#f6f8fa";
+      roundRectDash(ctx, padX+8, rowY+2, W-2*padX-16, indRowH-6, 8); ctx.fill();
+    }
+    var labelText = String(s.label).trim();
+    var maxLabelW = W-2*padX-32-100;
+    var lLines = wrapLinesGeneric(ctx, labelText, maxLabelW, "600 12.5px -apple-system, Roboto, Arial, sans-serif");
+    var oneLine = lLines[0] + (lLines.length > 1 ? "…" : "");
+    var rowMidY = rowY + indRowH/2 + 4;
+    ctx.fillStyle = "#1c2733"; ctx.font = "600 12.5px -apple-system, Roboto, Arial, sans-serif";
+    ctx.fillText((idx+1) + ". " + oneLine, padX+16, rowMidY);
+    ctx.textAlign = "right"; ctx.font = "800 13px -apple-system, Roboto, Arial, sans-serif";
+    ctx.fillStyle = rColor;
+    ctx.fillText(s.percent + "%", W-padX-16, rowMidY);
+    ctx.textAlign = "left";
+    rowY += indRowH;
+  });
+  y += indTableH + sectionGap;
+
+  // indicator summary block (Hari Kerja / Terlemah / Terkuat)
   ctx.fillStyle = "#fff";
   roundRectDash(ctx, padX, y, W-2*padX, indicatorBlockH, 14); ctx.fill();
-  var iy = y + 26;
+  var iy = y + padTopBlock;
   ctx.fillStyle = "#3b5a7d"; ctx.font = "700 11px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillText("HARI KERJA TERHITUNG: " + detail.countedDays + " HARI", padX+16, iy);
-  iy += 26;
+  iy += afterHariGap;
   ctx.fillStyle = "#e05a4e"; ctx.font = "700 11px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillText("INDIKATOR TERLEMAH", padX+16, iy);
-  iy += 18;
+  iy += titleLineH;
   ctx.fillStyle = "#1c2733"; ctx.font = "600 13px -apple-system, Roboto, Arial, sans-serif";
-  weakLines.forEach(function(l){ ctx.fillText(l, padX+16, iy); iy += 18; });
-  iy += 8;
+  weakLines.forEach(function(l){ ctx.fillText(l, padX+16, iy); iy += bodyLineH; });
+  iy += midGap;
   ctx.fillStyle = "#3fae63"; ctx.font = "700 11px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillText("INDIKATOR TERKUAT", padX+16, iy);
-  iy += 18;
+  iy += titleLineH;
   ctx.fillStyle = "#1c2733"; ctx.font = "600 13px -apple-system, Roboto, Arial, sans-serif";
-  strongLines.forEach(function(l){ ctx.fillText(l, padX+16, iy); iy += 18; });
+  strongLines.forEach(function(l){ ctx.fillText(l, padX+16, iy); iy += bodyLineH; });
 
-  y += indicatorBlockH + sectionGap - 8;
+  y += indicatorBlockH + sectionGap;
   ctx.fillStyle = "#9aa5b1"; ctx.font = "400 11px -apple-system, Roboto, Arial, sans-serif";
   ctx.fillText("Dibuat otomatis dari sistem KPI Cabang Makassar", padX, y);
 
