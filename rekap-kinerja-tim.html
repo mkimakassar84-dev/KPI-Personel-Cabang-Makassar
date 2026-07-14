@@ -279,7 +279,7 @@ var PERSON_LIST = ["ASTRID","ADI","REZA","BURHAMIN","ZUL","ASPAR","TAUFIK","PUTR
 var WEEKDAY_NAMES = ["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
 var WEEKDAY_SHORT = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
 
-var trendChart = null, indicatorChart = null, teamChart = null;
+var trendChart = null, indicatorChart = null, teamChart = null, dailyTrendChart = null;
 var isModalOpen = false;
 
 function currentYearMonth(){
@@ -596,10 +596,16 @@ function renderPerson(nama, bulan, detail, trend){
     + '<div class="bm-note-actions"><button id="btn-save-note" class="bm-note-save">Simpan Catatan</button><span id="bm-note-status" class="bm-note-status"></span></div>'
     + '</div>';
 
+  html += '<div class="panel">'
+    + '<h3>Tren Kepatuhan Harian</h3>'
+    + '<p class="panel-sub">' + nama + ' &middot; kinerja harian dalam ' + monthLabel(bulan) + ' &mdash; berubah mengikuti filter bulan</p>'
+    + '<div class="chart-wrap"><canvas id="chart-daily-trend"></canvas></div>'
+    + '</div>';
+
   html += '<div class="two-col">'
     + '<div class="panel">'
     +   '<h3>Tren Kepatuhan Bulanan</h3>'
-    +   '<p class="panel-sub">' + nama + ' &middot; seluruh bulan yang tercatat</p>'
+    +   '<p class="panel-sub">' + nama + ' &middot; seluruh bulan yang tercatat &mdash; tidak berubah walau filter bulan diganti</p>'
     +   '<div class="chart-wrap"><canvas id="chart-trend"></canvas></div>'
     + '</div>'
     + '<div class="panel">'
@@ -645,6 +651,48 @@ function renderPerson(nama, bulan, detail, trend){
       var d = detail.days.find(function(x){ return x.day === day; });
       openDayModal(nama, d, detail.labels);
     });
+  });
+
+  var isMobileDaily = window.innerWidth < 640;
+  var workdayDays = detail.days.filter(function(d){ return d.isWorkday; });
+  var ctxD = document.getElementById("chart-daily-trend").getContext("2d");
+  if (dailyTrendChart) dailyTrendChart.destroy();
+  dailyTrendChart = new Chart(ctxD, {
+    type: "line",
+    data: {
+      labels: detail.days.map(function(d){ return d.day; }),
+      datasets: [{
+        label: "Kepatuhan Harian (%)",
+        data: detail.days.map(function(d){ return d.isWorkday ? d.dailyPercent : null; }),
+        spanGaps: false,
+        borderColor: "#5b7fa6",
+        backgroundColor: "rgba(91,127,166,0.12)",
+        fill: true, tension: 0.25,
+        pointRadius: isMobileDaily ? 3 : 3,
+        pointHoverRadius: isMobileDaily ? 6 : 5,
+        pointBackgroundColor: function(ctx){
+          var v = ctx.raw;
+          if (v === null || v === undefined) return "#c9cfd6";
+          return v>=80 ? "#3fae63" : (v>=50 ? "#e0a53f" : "#e05a4e");
+        }
+      }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      devicePixelRatio: isMobileDaily ? 1.5 : (window.devicePixelRatio || 1),
+      animation:{ duration: 220 },
+      scales:{
+        y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobileDaily?10:12 } } },
+        x:{ ticks:{ font:{ size: isMobileDaily?9:11 }, maxRotation:0, autoSkip:true, maxTicksLimit: isMobileDaily?10:16 } }
+      },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ callbacks:{
+          title:function(items){ var d = detail.days[items[0].dataIndex]; return d.tanggal.split("-").reverse().join("/") + " (" + WEEKDAY_SHORT[d.weekday] + ")"; },
+          label:function(c){ return c.parsed.y === null ? "Bukan hari kerja / libur" : c.parsed.y + "% kepatuhan"; }
+        } }
+      }
+    }
   });
 
   var isMobileTrend = window.innerWidth < 640;
