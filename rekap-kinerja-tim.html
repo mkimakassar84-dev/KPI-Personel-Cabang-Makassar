@@ -291,6 +291,13 @@ function monthLabel(ym){
   var names = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
   return names[parseInt(p[1],10)-1] + " " + p[0];
 }
+function shortMonthLabel(ym){
+  var clean = String(ym || "").replace(/^K/,"");
+  var p = clean.split("-");
+  var names = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+  var n = names[parseInt(p[1],10)-1];
+  return n ? n : clean;
+}
 function escapeHtmlDash(s){
   return String(s == null ? "" : s)
     .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
@@ -663,7 +670,7 @@ function renderPerson(nama, bulan, detail, trend){
       labels: detail.days.map(function(d){ return d.day; }),
       datasets: [{
         label: "Kepatuhan Harian (%)",
-        data: detail.days.map(function(d){ return d.isWorkday ? d.dailyPercent : null; }),
+        data: detail.days.map(function(d){ return (d.isWorkday && d.submitted) ? d.dailyPercent : null; }),
         spanGaps: false,
         borderColor: "#5b7fa6",
         backgroundColor: "rgba(91,127,166,0.12)",
@@ -689,7 +696,11 @@ function renderPerson(nama, bulan, detail, trend){
         legend:{ display:false },
         tooltip:{ callbacks:{
           title:function(items){ var d = detail.days[items[0].dataIndex]; return d.tanggal.split("-").reverse().join("/") + " (" + WEEKDAY_SHORT[d.weekday] + ")"; },
-          label:function(c){ return c.parsed.y === null ? "Bukan hari kerja / libur" : c.parsed.y + "% kepatuhan"; }
+          label:function(c){
+            if (c.parsed.y !== null) return c.parsed.y + "% kepatuhan";
+            var dd = detail.days[c.dataIndex];
+            return dd.isWorkday ? "Belum diisi hari itu" : "Bukan hari kerja / libur";
+          }
         } }
       }
     }
@@ -701,7 +712,7 @@ function renderPerson(nama, bulan, detail, trend){
   trendChart = new Chart(ctxT, {
     type: "line",
     data: {
-      labels: trend.map(function(t){ return t.month; }),
+      labels: trend.map(function(t){ return shortMonthLabel(t.month); }),
       datasets: [{
         label: "Kepatuhan (%)",
         data: trend.map(function(t){ return t.percent; }),
@@ -723,7 +734,7 @@ function renderPerson(nama, bulan, detail, trend){
       },
       plugins:{
         legend:{ display:false },
-        tooltip:{ callbacks:{ title:function(items){ return monthLabel(items[0].label); }, label:function(c){ return c.parsed.y + "% kepatuhan"; } } }
+        tooltip:{ callbacks:{ title:function(items){ return monthLabel(trend[items[0].dataIndex].month.replace(/^K/,"")); }, label:function(c){ return c.parsed.y + "% kepatuhan"; } } }
       }
     }
   });
