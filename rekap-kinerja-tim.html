@@ -505,6 +505,8 @@ function renderOverview(list, bulan){
       responsive:true, maintainAspectRatio:false,
       devicePixelRatio: isMobile ? 1.5 : (window.devicePixelRatio || 1),
       animation:{ duration: 220 },
+      layout:{ padding:{ top: 10 } },
+      interaction:{ mode:"nearest", intersect:false },
       onHover: function(evt, elements, chart){ chart.canvas.style.cursor = elements.length ? "pointer" : "default"; },
       scales:{
         y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobile?10:12 } } },
@@ -675,8 +677,12 @@ function renderPerson(nama, bulan, detail, trend){
         borderColor: "#5b7fa6",
         backgroundColor: "rgba(91,127,166,0.12)",
         fill: true, tension: 0.25,
-        pointRadius: isMobileDaily ? 3 : 3,
-        pointHoverRadius: isMobileDaily ? 6 : 5,
+        pointRadius: isMobileDaily ? 4 : 4,
+        pointHoverRadius: isMobileDaily ? 7 : 6,
+        pointHitRadius: isMobileDaily ? 16 : 12,
+        borderWidth: 2.5,
+        pointBorderWidth: 2,
+        pointBorderColor: "#fff",
         pointBackgroundColor: function(ctx){
           var v = ctx.raw;
           if (v === null || v === undefined) return "#c9cfd6";
@@ -688,6 +694,8 @@ function renderPerson(nama, bulan, detail, trend){
       responsive:true, maintainAspectRatio:false,
       devicePixelRatio: isMobileDaily ? 1.5 : (window.devicePixelRatio || 1),
       animation:{ duration: 220 },
+      layout:{ padding:{ top: 14, right: 8 } },
+      interaction:{ mode:"nearest", intersect:false },
       scales:{
         y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobileDaily?10:12 } } },
         x:{ ticks:{ font:{ size: isMobileDaily?9:11 }, maxRotation:0, autoSkip:true, maxTicksLimit: isMobileDaily?10:16 } }
@@ -719,8 +727,12 @@ function renderPerson(nama, bulan, detail, trend){
         borderColor: "#3b5a7d",
         backgroundColor: "rgba(91,127,166,0.15)",
         fill: true, tension: 0.3,
-        pointRadius: isMobileTrend ? 5 : 4,
-        pointHoverRadius: isMobileTrend ? 7 : 6,
+        pointRadius: isMobileTrend ? 6 : 5,
+        pointHoverRadius: isMobileTrend ? 8 : 7,
+        pointHitRadius: isMobileTrend ? 16 : 12,
+        borderWidth: 2.5,
+        pointBorderWidth: 2,
+        pointBorderColor: "#fff",
         pointBackgroundColor: "#3b5a7d"
       }]
     },
@@ -728,6 +740,8 @@ function renderPerson(nama, bulan, detail, trend){
       responsive:true, maintainAspectRatio:false,
       devicePixelRatio: isMobileTrend ? 1.5 : (window.devicePixelRatio || 1),
       animation:{ duration: 220 },
+      layout:{ padding:{ top: 14, right: 8 } },
+      interaction:{ mode:"nearest", intersect:false },
       scales:{
         y:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobileTrend?10:12 } } },
         x:{ ticks:{ font:{ size: isMobileTrend?10:12 } } }
@@ -759,6 +773,7 @@ function renderPerson(nama, bulan, detail, trend){
       responsive:true, maintainAspectRatio:false,
       devicePixelRatio: isMobileInd ? 1.5 : (window.devicePixelRatio || 1),
       animation:{ duration: 220 },
+      interaction:{ mode:"nearest", intersect:false },
       scales:{
         x:{ beginAtZero:true, max:100, ticks:{ callback:function(v){return v+"%";}, font:{ size: isMobileInd?10:12 } } },
         y:{ ticks:{ font:{ size: isMobileInd?10:11 } } }
