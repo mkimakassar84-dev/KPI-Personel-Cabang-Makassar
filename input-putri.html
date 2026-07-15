@@ -155,6 +155,11 @@
     padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:auto;
   }
   .field-input.locked-input{ background:#f0f2f5; color:#7a8794; }
+  .row-card.row-locked{ background:#f7f8fa; border-radius:12px; padding:10px 4px 4px; position:relative; }
+  .row-locked-badge{
+    font-size:11px; font-weight:700; color:#1f7a43; background:#eafaf0;
+    display:inline-block; border-radius:8px; padding:4px 10px; margin-top:6px;
+  }
   .yn-btn:disabled{ opacity:.5; cursor:default; }
   .confirm-msg.small.warn-text{ color:var(--red); font-weight:700; text-align:center; }
 
@@ -349,7 +354,16 @@ function showIndicatorReviewDialog(evidenceJson, onConfirm){
 
 function formatJamInput(el){
   el.addEventListener("input", function(){
-    var v = el.value.replace(/[^0-9]/g, "").slice(0,4);
+    var digits = el.value.replace(/[^0-9]/g, "").slice(0,4);
+    var out = "";
+    for (var i = 0; i < digits.length; i++){
+      var d = digits[i];
+      if (i === 0 && d > "2") d = "2";
+      else if (i === 1 && out.charAt(0) === "2" && d > "3") d = "3";
+      else if (i === 2 && d > "5") d = "5";
+      out += d;
+    }
+    var v = out;
     if (v.length >= 3) v = v.slice(0,2) + ":" + v.slice(2);
     el.value = v;
   });
@@ -542,7 +556,22 @@ function buildRowHtml(manualIdx, rowIdx, defs, removable, isDynamicEksp){
   return '<div class="row-card" data-row="' + rowIdx + '">' + fieldsHtml + dynamicContainer + removeBtn + '</div>';
 }
 
-function buildFieldsHtml(manualIdx){
+function escAttrVal(s){
+  return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function buildRowHtmlLocked(manualIdx, rowIdx, defs, rowData){
+  var keys = Object.keys(rowData);
+  var fieldsHtml = keys.map(function(key, fi){
+    var id = "f-" + manualIdx + "-" + rowIdx + "-" + fi;
+    var val = rowData[key] || "";
+    return '<div class="field-item"><div class="field-label">' + key + '</div>'
+      + '<input type="text" class="field-input locked-input" id="' + id + '" data-key="' + key + '" value="' + escAttrVal(val) + '" disabled></div>';
+  }).join("");
+  return '<div class="row-card row-locked" data-row="' + rowIdx + '">' + fieldsHtml + '<div class="row-locked-badge">🔒 Baris tersimpan</div></div>';
+}
+
+function buildFieldsHtml(manualIdx, savedRows){
   var group = EXTRA_FIELDS[manualIdx];
   if (!group) {
     return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="0">'
@@ -551,9 +580,15 @@ function buildFieldsHtml(manualIdx){
       + '<input type="text" class="field-input" data-key="Keterangan" maxlength="300" placeholder="Tulis keterangan singkat...">'
       + '</div></div></div>';
   }
-  var rowHtml = buildRowHtml(manualIdx, 0, group.fields, false, !!group.dynamicEkspedisi);
+  var lockedRowsHtml = '';
+  var startIdx = 0;
+  if (group.repeatable && savedRows && savedRows.length) {
+    lockedRowsHtml = savedRows.map(function(rowData, idx){ return buildRowHtmlLocked(manualIdx, idx, group.fields, rowData); }).join('');
+    startIdx = savedRows.length;
+  }
+  var rowHtml = buildRowHtml(manualIdx, startIdx, group.fields, false, !!group.dynamicEkspedisi);
   var addBtn = group.repeatable ? '<button type="button" class="add-row-btn" data-idx="' + manualIdx + '">+ Tambah Baris' + (group.dynamicEkspedisi ? ' (Ritase Berikutnya)' : '') + '</button>' : '';
-  return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="' + (group.repeatable?'1':'0') + '">' + rowHtml + '</div>' + addBtn;
+  return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="' + (group.repeatable?'1':'0') + '">' + lockedRowsHtml + rowHtml + '</div>' + addBtn;
 }
 
 function wireEkspedisiCount(scopeEl){
@@ -783,7 +818,21 @@ function renderDynamic(tanggal, status){
             + '</div></div>';
         }
 
-        var fieldsHtml = buildFieldsHtml(i);
+        if (v === true) {
+          return '<div class="item"><div class="item-row">'
+            + '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
+            + '<span class="badge-static on">🔒 YA</span>'
+            + '</div>'
+            + renderEvidenceView(evi)
+            + '</div>';
+        }
+
+        var groupDefSaved = EXTRA_FIELDS[i];
+        var savedRowsForField = null;
+        if (groupDefSaved && groupDefSaved.repeatable && evi) {
+          try { var parsedEvi = JSON.parse(evi); if (Array.isArray(parsedEvi)) savedRowsForField = parsedEvi; } catch(e){}
+        }
+        var fieldsHtml = buildFieldsHtml(i, savedRowsForField);
         var warnCfg = EXTRA_FIELDS[i] && EXTRA_FIELDS[i].warnIfEmpty;
         var warnFlag = warnCfg ? ' data-warn="1"' : '';
         var warnHtml = warnCfg ? ('<div class="warn-hint" id="warn-' + i + '" style="display:' + (v ? 'none' : 'flex') + '">⚠️ Sebaiknya diisi hari ini</div>') : '';
@@ -858,11 +907,44 @@ function renderDynamic(tanggal, status){
     wireIndicatorConfirm(i, chk, wrap);
   });
 
+  function lockRowCard(rowEl){
+    rowEl.querySelectorAll('.field-input').forEach(function(el){
+      el.disabled = true;
+      el.classList.add('locked-input');
+    });
+    var removeBtn = rowEl.querySelector('.remove-row-btn');
+    if (removeBtn) removeBtn.remove();
+    rowEl.classList.add('row-locked');
+    if (!rowEl.querySelector('.row-locked-badge')) {
+      var badge = document.createElement('div');
+      badge.className = 'row-locked-badge';
+      badge.textContent = '🔒 Baris tersimpan';
+      rowEl.appendChild(badge);
+    }
+  }
+
   area.querySelectorAll('.add-row-btn').forEach(function(btn2){
     btn2.addEventListener('click', function(){
-      doDraftSave();
-      showToast('Baris sebelumnya tersimpan ✓', 'okc');
-      addRow(parseInt(btn2.getAttribute('data-idx'), 10));
+      var manualIdx = parseInt(btn2.getAttribute('data-idx'), 10);
+      var container = document.getElementById('rows-' + manualIdx);
+      var openRows = container.querySelectorAll('.row-card:not(.row-locked)');
+      var lastRow = openRows[openRows.length - 1];
+      if (lastRow) {
+        var incomplete = false;
+        lastRow.querySelectorAll('.field-input').forEach(function(inp){
+          if (!inp.value.trim() && inp.getAttribute('data-optional') !== '1') incomplete = true;
+        });
+        if (incomplete) {
+          showToast('Lengkapi baris ini dulu sebelum tambah baris baru', 'err');
+          return;
+        }
+      }
+      showConfirmDialog('Simpan Baris Ini?', function(){
+        if (lastRow) lockRowCard(lastRow);
+        doDraftSave();
+        showToast('Baris tersimpan ✓', 'okc');
+        addRow(manualIdx);
+      });
     });
   });
 
