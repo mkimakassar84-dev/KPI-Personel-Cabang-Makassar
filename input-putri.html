@@ -155,6 +155,8 @@
     padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:auto;
   }
   .field-input.locked-input{ background:#f0f2f5; color:#7a8794; }
+  .yn-btn:disabled{ opacity:.5; cursor:default; }
+  .confirm-msg.small.warn-text{ color:var(--red); font-weight:700; text-align:center; }
 
   .submitbar{
     position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
@@ -305,6 +307,31 @@ function showReviewModal(manualLabels, tanggal, state, onConfirm){
     + '<div class="confirm-actions">'
     +   '<button type="button" class="confirm-cancel">Kembali</button>'
     +   '<button type="button" class="confirm-ok">Ya, Simpan Kinerja</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){ overlay.classList.add("show"); });
+  function close(){
+    overlay.classList.remove("show");
+    setTimeout(function(){ overlay.remove(); }, 200);
+  }
+  overlay.querySelector(".confirm-cancel").addEventListener("click", close);
+  overlay.addEventListener("click", function(e){ if (e.target === overlay) close(); });
+  overlay.querySelector(".confirm-ok").addEventListener("click", function(){
+    close();
+    onConfirm();
+  });
+}
+
+function showIndicatorReviewDialog(evidenceJson, onConfirm){
+  var overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.innerHTML = '<div class="confirm-box review-box">'
+    + '<div class="confirm-msg">Review Data Indikator</div>'
+    + '<div class="review-list">' + renderEvidenceView(evidenceJson) + '</div>'
+    + '<div class="confirm-msg small warn-text">⚠️ Data Tidak Bisa Diedit Setelah Konfirmasi</div>'
+    + '<div class="confirm-actions">'
+    +   '<button type="button" class="confirm-cancel">Periksa Lagi</button>'
+    +   '<button type="button" class="confirm-ok">Ya, Konfirmasi</button>'
     + '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(function(){ overlay.classList.add("show"); });
@@ -760,13 +787,10 @@ function renderDynamic(tanggal, status){
         var warnCfg = EXTRA_FIELDS[i] && EXTRA_FIELDS[i].warnIfEmpty;
         var warnFlag = warnCfg ? ' data-warn="1"' : '';
         var warnHtml = warnCfg ? ('<div class="warn-hint" id="warn-' + i + '" style="display:' + (v ? 'none' : 'flex') + '">⚠️ Sebaiknya diisi hari ini</div>') : '';
-        var groupDefX = EXTRA_FIELDS[i];
-        var progressBtnHtml = (groupDefX && groupDefX.repeatable) ? '<button type="button" class="save-progress-btn" data-idx="' + i + '">💾 Simpan Progress</button>' : '';
         var actionsHtml = '<div class="indicator-actions" id="actions-' + i + '">'
           + '<button type="button" class="confirm-ind-btn" data-idx="' + i + '">✓ Konfirmasi Data Ini</button>'
-          + progressBtnHtml
           + '</div>'
-          + '<div class="indicator-locked-badge" id="locked-badge-' + i + '" style="display:none">✅ Data tersimpan <button type="button" class="edit-ind-btn" data-idx="' + i + '">Edit</button></div>';
+          + '<div class="indicator-locked-badge" id="locked-badge-' + i + '" style="display:none">🔒 Data tersimpan &amp; terkunci</div>';
         return '<div class="item"' + warnFlag + ' data-item-idx="' + i + '">'
           + '<div class="item-row-yn">'
           +   '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
@@ -834,26 +858,25 @@ function renderDynamic(tanggal, status){
     wireIndicatorConfirm(i, chk, wrap);
   });
 
-  area.querySelectorAll('.save-progress-btn').forEach(function(pbtn){
-    pbtn.addEventListener('click', function(){
-      doDraftSave();
-      showToast('Progress baris tersimpan ✓', 'okc');
-    });
-  });
-
   area.querySelectorAll('.add-row-btn').forEach(function(btn2){
     btn2.addEventListener('click', function(){
+      doDraftSave();
+      showToast('Baris sebelumnya tersimpan ✓', 'okc');
       addRow(parseInt(btn2.getAttribute('data-idx'), 10));
     });
   });
 
   function setIndicatorLocked(i, wrap, isLocked){
+    var itemEl = wrap.closest('.item');
     var actions = document.getElementById('actions-' + i);
     var badge = document.getElementById('locked-badge-' + i);
-    wrap.querySelectorAll('.field-input, .add-row-btn, .remove-row-btn, .save-progress-btn').forEach(function(el){
+    wrap.querySelectorAll('.field-input, .add-row-btn, .remove-row-btn').forEach(function(el){
       el.disabled = isLocked;
       el.classList.toggle('locked-input', isLocked && el.classList.contains('field-input'));
     });
+    if (itemEl) {
+      itemEl.querySelectorAll('.yn-btn[data-idx="' + i + '"]').forEach(function(el){ el.disabled = isLocked; });
+    }
     if (actions) actions.style.display = isLocked ? 'none' : 'flex';
     if (badge) badge.style.display = isLocked ? 'flex' : 'none';
     wrap.dataset.confirmed = isLocked ? '1' : '0';
@@ -861,7 +884,6 @@ function renderDynamic(tanggal, status){
 
   function wireIndicatorConfirm(i, chk, wrap){
     var confirmBtn = wrap.querySelector('.confirm-ind-btn[data-idx="' + i + '"]');
-    var editBtn = wrap.querySelector('.edit-ind-btn[data-idx="' + i + '"]');
     if (!confirmBtn) return;
     confirmBtn.addEventListener('click', function(){
       var result = collectFieldsValue(i);
@@ -875,17 +897,12 @@ function renderDynamic(tanggal, status){
         showToast('Minimal ' + minRows + ' data diperlukan (baru ' + result.count + ')', 'err');
         return;
       }
-      showConfirmDialog('Yakin data indikator ini sudah benar dan siap disimpan?', function(){
+      showIndicatorReviewDialog(result.json, function(){
         setIndicatorLocked(i, wrap, true);
         doDraftSave();
         showToast('Indikator tersimpan ✓', 'okc');
       });
     });
-    if (editBtn) {
-      editBtn.addEventListener('click', function(){
-        setIndicatorLocked(i, wrap, false);
-      });
-    }
   }
 
   var elDatang = document.getElementById("f-datang");
