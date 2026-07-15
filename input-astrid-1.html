@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Input Kinerja Harian - BURHAMIN</title>
+<title>Input Kinerja Harian - ASTRID</title>
 <link rel="preconnect" href="https://script.google.com" crossorigin>
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <link rel="dns-prefetch" href="https://script.google.com">
@@ -135,33 +135,6 @@
   .evidence-view .ev-k{ color:#8b94a0; }
   .evidence-view .ev-v{ font-weight:600; text-align:right; }
 
-  .indicator-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .confirm-ind-btn{
-    background:var(--green); color:#fff; border:none; border-radius:10px;
-    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
-  }
-  .save-progress-btn{
-    background:#fff; color:var(--blue-dark); border:1.5px solid var(--blue); border-radius:10px;
-    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
-  }
-  .indicator-locked-badge{
-    display:flex; align-items:center; gap:10px; margin-top:10px;
-    background:#eafaf0; color:#1f7a43; border-radius:10px; padding:9px 12px;
-    font-size:12.5px; font-weight:700;
-  }
-  .edit-ind-btn{
-    background:var(--blue-dark); color:#fff; border:none; border-radius:8px;
-    padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:auto;
-  }
-  .field-input.locked-input{ background:#f0f2f5; color:#7a8794; }
-  .row-card.row-locked{ background:#f7f8fa; border-radius:12px; padding:10px 4px 4px; position:relative; }
-  .row-locked-badge{
-    font-size:11px; font-weight:700; color:#1f7a43; background:#eafaf0;
-    display:inline-block; border-radius:8px; padding:4px 10px; margin-top:6px;
-  }
-  .yn-btn:disabled{ opacity:.5; cursor:default; }
-  .confirm-msg.small.warn-text{ color:var(--red); font-weight:700; text-align:center; }
-
   .submitbar{
     position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
     background:linear-gradient(to top, var(--bg) 60%, transparent);
@@ -234,14 +207,14 @@
 
 <script>
 var WEBAPP_URL = "https://script.google.com/macros/s/AKfycbyZjdcOqCzQZ3i54Y2pAZVfbnMfuaEHmPFOaMhlpPqBgD958CWKTN5iujN4lPOkvJ43/exec";
-var NAMA = "BURHAMIN";
+var NAMA = "ASTRID";
 var BATAS_DATANG = "08:15";
 var BATAS_PULANG = "16:45";
 
 // manualIndex 0..7 = indikator item 3..10 (labels[2..9])
-var EXTRA_FIELDS = {"1": {"repeatable": true, "minRows": 3, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Jumlah Hari Menunggak", "type": "number"}, {"label": "Saldo Piutang", "type": "rupiah"}, {"label": "Keterangan Evaluasi", "type": "text"}]}, "2": {"repeatable": false, "fields": [{"label": "Jam", "type": "jam"}]}, "3": {"repeatable": false, "fields": [{"label": "Jumlah Surat Jalan MKI", "type": "number"}, {"label": "Jumlah Surat Jalan CFN", "type": "number"}]}, "4": {"repeatable": true, "fields": [{"label": "No Invoice", "type": "text"}, {"label": "Nama Customer", "type": "text"}, {"label": "Jumlah Piutang", "type": "rupiah"}, {"label": "Jumlah Pembayaran", "type": "rupiah"}]}, "5": {"repeatable": false, "fields": [{"label": "Jumlah Kode Barang Turnover Hari ini", "type": "number"}, {"label": "Jumlah Delivery Invoice Hari Ini", "type": "number"}, {"label": "Kode Barang Return", "type": "text"}, {"label": "Jumlah Quantity Return", "type": "number"}]}, "6": {"repeatable": true, "fields": [{"label": "Nama Customer Handcarry", "type": "text"}, {"label": "Kode Barang", "type": "text"}, {"label": "Quantity", "type": "number"}]}, "7": {"repeatable": false, "fields": [{"label": "Jumlah Invoice Delivery Hari Ini", "type": "number"}, {"label": "Persentase Delivery", "type": "percent1"}, {"label": "Delivery MKI", "type": "number"}, {"label": "Delivery CFN", "type": "number"}, {"label": "Surat Jalan by Ekspedisi", "type": "number"}, {"label": "Surat Jalan by Handcarry", "type": "number"}]}};
-var AUTO_LOCKED = [0];
-var SKIP_EVIDENCE = false;
+var EXTRA_FIELDS = {};
+var AUTO_LOCKED = [];
+var SKIP_EVIDENCE = true;
 var SHARED_PEER_IDX = []; // array of manualIndex yang nilainya bisa datang dari peer
 
 var app = document.getElementById("app");
@@ -326,63 +299,14 @@ function showReviewModal(manualLabels, tanggal, state, onConfirm){
   });
 }
 
-function showIndicatorReviewDialog(evidenceJson, onConfirm){
-  var overlay = document.createElement("div");
-  overlay.className = "confirm-overlay";
-  overlay.innerHTML = '<div class="confirm-box review-box">'
-    + '<div class="confirm-msg">Review Data Indikator</div>'
-    + '<div class="review-list">' + renderEvidenceView(evidenceJson) + '</div>'
-    + '<div class="confirm-msg small warn-text">⚠️ Data Tidak Bisa Diedit Setelah Konfirmasi</div>'
-    + '<div class="confirm-actions">'
-    +   '<button type="button" class="confirm-cancel">Periksa Lagi</button>'
-    +   '<button type="button" class="confirm-ok">Ya, Konfirmasi</button>'
-    + '</div></div>';
-  document.body.appendChild(overlay);
-  requestAnimationFrame(function(){ overlay.classList.add("show"); });
-  function close(){
-    overlay.classList.remove("show");
-    setTimeout(function(){ overlay.remove(); }, 200);
-  }
-  overlay.querySelector(".confirm-cancel").addEventListener("click", close);
-  overlay.addEventListener("click", function(e){ if (e.target === overlay) close(); });
-  overlay.querySelector(".confirm-ok").addEventListener("click", function(){
-    close();
-    onConfirm();
-  });
-}
-
 function formatJamInput(el){
   el.addEventListener("input", function(){
-    var digits = el.value.replace(/[^0-9]/g, "").slice(0,4);
-    var out = "";
-    for (var i = 0; i < digits.length; i++){
-      var d = digits[i];
-      if (i === 0 && d > "2") d = "2";
-      else if (i === 1 && out.charAt(0) === "2" && d > "3") d = "3";
-      else if (i === 2 && d > "5") d = "5";
-      out += d;
-    }
-    var v = out;
+    var v = el.value.replace(/[^0-9]/g, "").slice(0,4);
     if (v.length >= 3) v = v.slice(0,2) + ":" + v.slice(2);
     el.value = v;
   });
 }
 
-function formatPercentInput(el){
-  el.addEventListener("input", function(){
-    var v = el.value.replace(/[^0-9.]/g, "");
-    var parts = v.split(".");
-    if (parts.length > 2) v = parts[0] + "." + parts.slice(1).join("");
-    parts = v.split(".");
-    if (parts[1]) parts[1] = parts[1].slice(0,1);
-    v = parts.join(".");
-    el.value = v;
-  });
-  el.addEventListener("blur", function(){
-    var v = el.value.trim();
-    if (v && v !== "" && !/%$/.test(v)) el.value = v + "%";
-  });
-}
 function isValidJam(v){
   return /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(v);
 }
@@ -540,8 +464,6 @@ function fieldInputHtml(manualIdx, rowIdx, fi, f, isDynamicEksp){
     inner = '<input type="text" class="field-input' + extraClass + '" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="number" inputmode="numeric" placeholder="0">';
   } else if (f.type === "jam") {
     inner = '<input type="text" class="field-input jam-field" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="jam" inputmode="numeric" maxlength="5" placeholder="08:00">';
-  } else if (f.type === "percent1") {
-    inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="percent1" inputmode="decimal" placeholder="00.0%">';
   } else {
     inner = '<input type="text" class="field-input" id="' + id + '" data-key="' + f.label + '"' + optAttr + ' data-type="text" placeholder="' + f.label + '">';
   }
@@ -555,22 +477,7 @@ function buildRowHtml(manualIdx, rowIdx, defs, removable, isDynamicEksp){
   return '<div class="row-card" data-row="' + rowIdx + '">' + fieldsHtml + dynamicContainer + removeBtn + '</div>';
 }
 
-function escAttrVal(s){
-  return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-
-function buildRowHtmlLocked(manualIdx, rowIdx, defs, rowData){
-  var keys = Object.keys(rowData);
-  var fieldsHtml = keys.map(function(key, fi){
-    var id = "f-" + manualIdx + "-" + rowIdx + "-" + fi;
-    var val = rowData[key] || "";
-    return '<div class="field-item"><div class="field-label">' + key + '</div>'
-      + '<input type="text" class="field-input locked-input" id="' + id + '" data-key="' + key + '" value="' + escAttrVal(val) + '" disabled></div>';
-  }).join("");
-  return '<div class="row-card row-locked" data-row="' + rowIdx + '">' + fieldsHtml + '<div class="row-locked-badge">🔒 Baris tersimpan</div></div>';
-}
-
-function buildFieldsHtml(manualIdx, savedRows){
+function buildFieldsHtml(manualIdx){
   var group = EXTRA_FIELDS[manualIdx];
   if (!group) {
     return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="0">'
@@ -579,15 +486,9 @@ function buildFieldsHtml(manualIdx, savedRows){
       + '<input type="text" class="field-input" data-key="Keterangan" maxlength="300" placeholder="Tulis keterangan singkat...">'
       + '</div></div></div>';
   }
-  var lockedRowsHtml = '';
-  var startIdx = 0;
-  if (group.repeatable && savedRows && savedRows.length) {
-    lockedRowsHtml = savedRows.map(function(rowData, idx){ return buildRowHtmlLocked(manualIdx, idx, group.fields, rowData); }).join('');
-    startIdx = savedRows.length;
-  }
-  var rowHtml = buildRowHtml(manualIdx, startIdx, group.fields, false, !!group.dynamicEkspedisi);
+  var rowHtml = buildRowHtml(manualIdx, 0, group.fields, false, !!group.dynamicEkspedisi);
   var addBtn = group.repeatable ? '<button type="button" class="add-row-btn" data-idx="' + manualIdx + '">+ Tambah Baris' + (group.dynamicEkspedisi ? ' (Ritase Berikutnya)' : '') + '</button>' : '';
-  return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="' + (group.repeatable?'1':'0') + '">' + lockedRowsHtml + rowHtml + '</div>' + addBtn;
+  return '<div class="rows-container" id="rows-' + manualIdx + '" data-repeatable="' + (group.repeatable?'1':'0') + '">' + rowHtml + '</div>' + addBtn;
 }
 
 function wireEkspedisiCount(scopeEl){
@@ -622,9 +523,6 @@ function wireRowInputs(rowEl){
   });
   rowEl.querySelectorAll('.field-input[data-type="jam"]').forEach(function(inp){
     formatJamInput(inp);
-  });
-  rowEl.querySelectorAll('.field-input[data-type="percent1"]').forEach(function(inp){
-    formatPercentInput(inp);
   });
   wireEkspedisiCount(rowEl);
   var removeBtn = rowEl.querySelector('.remove-row-btn');
@@ -664,9 +562,6 @@ function wireFieldsValidation(manualIdx, chk, wrap){
     }
     if (inp.getAttribute("data-type") === "jam") {
       formatJamInput(inp);
-    }
-    if (inp.getAttribute("data-type") === "percent1") {
-      formatPercentInput(inp);
     }
     inp.addEventListener("blur", checkFieldsComplete);
     inp.addEventListener("change", checkFieldsComplete);
@@ -728,12 +623,6 @@ function collectFieldsValue(manualIdx){
     if (!v && !isOptional) complete = false;
     obj[inp.getAttribute('data-key')] = v;
   });
-  var condDef = group && group.conditionalRequire;
-  if (condDef) {
-    var whenVal = (obj[condDef.when] || '').trim();
-    var triggered = condDef.operator === 'neq0' ? (whenVal !== '' && whenVal !== '0') : false;
-    if (triggered && !(obj[condDef.field] || '').trim()) complete = false;
-  }
   if (!any) return { ok:true, json:"", count:0 };
   if (!complete) return { ok:false, json:"", count:0 };
   return { ok:true, json: JSON.stringify(obj), count:1 };
@@ -817,28 +706,10 @@ function renderDynamic(tanggal, status){
             + '</div></div>';
         }
 
-        if (v === true) {
-          return '<div class="item"><div class="item-row">'
-            + '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
-            + '<span class="badge-static on">🔒 YA</span>'
-            + '</div>'
-            + renderEvidenceView(evi)
-            + '</div>';
-        }
-
-        var groupDefSaved = EXTRA_FIELDS[i];
-        var savedRowsForField = null;
-        if (groupDefSaved && groupDefSaved.repeatable && evi) {
-          try { var parsedEvi = JSON.parse(evi); if (Array.isArray(parsedEvi)) savedRowsForField = parsedEvi; } catch(e){}
-        }
-        var fieldsHtml = buildFieldsHtml(i, savedRowsForField);
+        var fieldsHtml = buildFieldsHtml(i);
         var warnCfg = EXTRA_FIELDS[i] && EXTRA_FIELDS[i].warnIfEmpty;
         var warnFlag = warnCfg ? ' data-warn="1"' : '';
         var warnHtml = warnCfg ? ('<div class="warn-hint" id="warn-' + i + '" style="display:' + (v ? 'none' : 'flex') + '">⚠️ Sebaiknya diisi hari ini</div>') : '';
-        var actionsHtml = '<div class="indicator-actions" id="actions-' + i + '">'
-          + '<button type="button" class="confirm-ind-btn" data-idx="' + i + '">✓ Konfirmasi Data Ini</button>'
-          + '</div>'
-          + '<div class="indicator-locked-badge" id="locked-badge-' + i + '" style="display:none">🔒 Data tersimpan &amp; terkunci</div>';
         return '<div class="item"' + warnFlag + ' data-item-idx="' + i + '">'
           + '<div class="item-row-yn">'
           +   '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
@@ -848,7 +719,7 @@ function renderDynamic(tanggal, status){
           +   '</label>'
           + '</div>'
           + warnHtml
-          + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + actionsHtml + '</div>'
+          + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + '</div>'
           + '</div>';
       }).join("")
     + '</div>';
@@ -883,88 +754,13 @@ function renderDynamic(tanggal, status){
     });
 
     wireFieldsValidation(i, chk, wrap);
-    wireIndicatorConfirm(i, chk, wrap);
   });
-
-  function lockRowCard(rowEl){
-    rowEl.querySelectorAll('.field-input').forEach(function(el){
-      el.disabled = true;
-      el.classList.add('locked-input');
-    });
-    var removeBtn = rowEl.querySelector('.remove-row-btn');
-    if (removeBtn) removeBtn.remove();
-    rowEl.classList.add('row-locked');
-    if (!rowEl.querySelector('.row-locked-badge')) {
-      var badge = document.createElement('div');
-      badge.className = 'row-locked-badge';
-      badge.textContent = '🔒 Baris tersimpan';
-      rowEl.appendChild(badge);
-    }
-  }
 
   area.querySelectorAll('.add-row-btn').forEach(function(btn2){
     btn2.addEventListener('click', function(){
-      var manualIdx = parseInt(btn2.getAttribute('data-idx'), 10);
-      var container = document.getElementById('rows-' + manualIdx);
-      var openRows = container.querySelectorAll('.row-card:not(.row-locked)');
-      var lastRow = openRows[openRows.length - 1];
-      if (lastRow) {
-        var incomplete = false;
-        lastRow.querySelectorAll('.field-input').forEach(function(inp){
-          if (!inp.value.trim() && inp.getAttribute('data-optional') !== '1') incomplete = true;
-        });
-        if (incomplete) {
-          showToast('Lengkapi baris ini dulu sebelum tambah baris baru', 'err');
-          return;
-        }
-      }
-      showConfirmDialog('Simpan Baris Ini?', function(){
-        if (lastRow) lockRowCard(lastRow);
-        doDraftSave();
-        showToast('Baris tersimpan ✓', 'okc');
-        addRow(manualIdx);
-      });
+      addRow(parseInt(btn2.getAttribute('data-idx'), 10));
     });
   });
-
-  function setIndicatorLocked(i, wrap, isLocked){
-    var itemEl = wrap.closest('.item');
-    var actions = document.getElementById('actions-' + i);
-    var badge = document.getElementById('locked-badge-' + i);
-    wrap.querySelectorAll('.field-input, .add-row-btn, .remove-row-btn').forEach(function(el){
-      el.disabled = isLocked;
-      el.classList.toggle('locked-input', isLocked && el.classList.contains('field-input'));
-    });
-    if (itemEl) {
-      itemEl.querySelectorAll('.chk-manual[data-idx="' + i + '"]').forEach(function(el){ el.disabled = isLocked; });
-    }
-    if (actions) actions.style.display = isLocked ? 'none' : 'flex';
-    if (badge) badge.style.display = isLocked ? 'flex' : 'none';
-    wrap.dataset.confirmed = isLocked ? '1' : '0';
-  }
-
-  function wireIndicatorConfirm(i, chk, wrap){
-    var confirmBtn = wrap.querySelector('.confirm-ind-btn[data-idx="' + i + '"]');
-    if (!confirmBtn) return;
-    confirmBtn.addEventListener('click', function(){
-      var result = collectFieldsValue(i);
-      var groupDef = EXTRA_FIELDS[i];
-      var minRows = (groupDef && groupDef.minRows) ? groupDef.minRows : 1;
-      if (!result.ok || result.count === 0) {
-        showToast('Lengkapi dulu isian sebelum konfirmasi', 'err');
-        return;
-      }
-      if (result.count < minRows) {
-        showToast('Minimal ' + minRows + ' data diperlukan (baru ' + result.count + ')', 'err');
-        return;
-      }
-      showIndicatorReviewDialog(result.json, function(){
-        setIndicatorLocked(i, wrap, true);
-        doDraftSave();
-        showToast('Indikator tersimpan ✓', 'okc');
-      });
-    });
-  }
 
   var elDatang = document.getElementById("f-datang");
   var elPulang = document.getElementById("f-pulang");

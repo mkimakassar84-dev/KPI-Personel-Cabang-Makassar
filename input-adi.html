@@ -67,14 +67,13 @@
   .item-row{ display:flex; align-items:center; justify-content:space-between; }
   .item-row-yn{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
   .item[data-warn="1"]{ background:#fffaf0; margin:0 -18px; padding:12px 18px; border-radius:10px; }
-  .yn-group{ display:flex; gap:6px; flex:0 0 auto; }
-  .yn-btn{
-    min-width:58px; padding:9px 12px; border-radius:10px; border:1.5px solid #dde2e8;
-    background:#fbfcfd; color:#8b94a0; font-size:12px; font-weight:700; letter-spacing:.3px;
-    cursor:pointer; -webkit-tap-highlight-color:transparent; transition:.15s;
-  }
-  .yn-btn.yn-tidak.active{ background:#fdecea; border-color:var(--red); color:var(--red); }
-  .yn-btn.yn-ya.active{ background:#e4f6ea; border-color:var(--green); color:var(--green); }
+  .toggle-switch{ position:relative; display:inline-block; width:52px; height:30px; flex:0 0 auto; }
+  .toggle-switch .toggle-input{ opacity:0; width:0; height:0; position:absolute; }
+  .toggle-slider{ position:absolute; inset:0; background:#d6dae0; border-radius:30px; transition:background .2s ease; cursor:pointer; }
+  .toggle-slider::before{ content:""; position:absolute; width:24px; height:24px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform .2s ease; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+  .toggle-input:checked + .toggle-slider{ background:var(--blue-dark); }
+  .toggle-input:checked + .toggle-slider::before{ transform:translateX(22px); }
+  .toggle-input:disabled + .toggle-slider{ opacity:.5; cursor:default; }
   .warn-hint{ font-size:11px; color:#a05a00; margin-top:4px; display:flex; align-items:center; gap:4px; }
   .item .txt{font-size:14px; padding-right:12px; line-height:1.35;}
   .item .num{
@@ -841,11 +840,10 @@ function renderDynamic(tanggal, status){
         return '<div class="item"' + warnFlag + ' data-item-idx="' + i + '">'
           + '<div class="item-row-yn">'
           +   '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
-          +   '<div class="yn-group">'
-          +     '<button type="button" class="yn-btn yn-tidak' + (!v ? ' active' : '') + '" data-idx="' + i + '" data-val="0">TIDAK</button>'
-          +     '<button type="button" class="yn-btn yn-ya' + (v ? ' active' : '') + '" data-idx="' + i + '" data-val="1">YA</button>'
-          +   '</div>'
-          +   '<input type="checkbox" class="chk-manual" data-idx="' + i + '"' + (v ? ' checked' : '') + ' style="display:none">'
+          +   '<label class="toggle-switch">'
+          +     '<input type="checkbox" class="chk-manual toggle-input" data-idx="' + i + '"' + (v ? ' checked' : '') + '>'
+          +     '<span class="toggle-slider"></span>'
+          +   '</label>'
           + '</div>'
           + warnHtml
           + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + actionsHtml + '</div>'
@@ -881,25 +879,6 @@ function renderDynamic(tanggal, status){
       var warnEl = document.getElementById('warn-' + i);
       if (warnEl) warnEl.style.display = chk.checked ? 'none' : 'flex';
     });
-
-    var btnYa = document.querySelector('.yn-ya[data-idx="' + i + '"]');
-    var btnTidak = document.querySelector('.yn-tidak[data-idx="' + i + '"]');
-    if (btnYa && btnTidak) {
-      btnYa.addEventListener('click', function(){
-        if (chk.checked) return;
-        chk.checked = true;
-        btnYa.classList.add('active');
-        btnTidak.classList.remove('active');
-        chk.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      btnTidak.addEventListener('click', function(){
-        if (!chk.checked) return;
-        chk.checked = false;
-        btnTidak.classList.add('active');
-        btnYa.classList.remove('active');
-        chk.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-    }
 
     wireFieldsValidation(i, chk, wrap);
     wireIndicatorConfirm(i, chk, wrap);
@@ -955,7 +934,7 @@ function renderDynamic(tanggal, status){
       el.classList.toggle('locked-input', isLocked && el.classList.contains('field-input'));
     });
     if (itemEl) {
-      itemEl.querySelectorAll('.yn-btn[data-idx="' + i + '"]').forEach(function(el){ el.disabled = isLocked; });
+      itemEl.querySelectorAll('.chk-manual[data-idx="' + i + '"]').forEach(function(el){ el.disabled = isLocked; });
     }
     if (actions) actions.style.display = isLocked ? 'none' : 'flex';
     if (badge) badge.style.display = isLocked ? 'flex' : 'none';
