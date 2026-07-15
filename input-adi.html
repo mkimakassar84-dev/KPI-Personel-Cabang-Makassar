@@ -133,6 +133,40 @@
   .evidence-view .ev-k{ color:#8b94a0; }
   .evidence-view .ev-v{ font-weight:600; text-align:right; }
 
+  .indicator-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .confirm-ind-btn{
+    background:var(--green); color:#fff; border:none; border-radius:10px;
+    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .save-progress-btn{
+    background:#fff; color:var(--blue-dark); border:1.5px solid var(--blue); border-radius:10px;
+    padding:9px 14px; font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .indicator-locked-badge{
+    display:flex; align-items:center; gap:10px; margin-top:10px;
+    background:#eafaf0; color:#1f7a43; border-radius:10px; padding:9px 12px;
+    font-size:12.5px; font-weight:700;
+  }
+  .edit-ind-btn{
+    background:var(--blue-dark); color:#fff; border:none; border-radius:8px;
+    padding:5px 12px; font-size:11.5px; font-weight:700; cursor:pointer; margin-left:auto;
+  }
+  .field-input.locked-input{ background:#f0f2f5; color:#7a8794; }
+
+  .confirm-msg.small{ font-size:12.5px; font-weight:600; color:#5b6672; margin-top:14px; margin-bottom:14px; }
+  .review-date{ text-align:center; font-size:12px; color:var(--gray); margin-bottom:14px; }
+  .review-list{ border-top:1px solid #eef0f3; max-height:52vh; overflow-y:auto; }
+  .review-row{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    padding:9px 0 2px; border-bottom:1px solid #eef0f3; font-size:12.5px; color:var(--navy);
+  }
+  .review-row.has-evi{ border-bottom:none; padding-bottom:0; }
+  .review-badge{ font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; flex:0 0 auto; }
+  .review-badge.ok{ background:#e4f6ea; color:var(--green); }
+  .review-badge.no{ background:#fdecea; color:var(--red); }
+  .review-evi{ padding:2px 0 10px; border-bottom:1px solid #eef0f3; }
+  .review-evi .evidence-view{ background:#f7f8fa; margin-top:0; }
+
   .submitbar{
     position:fixed; left:0; right:0; bottom:0; padding:14px 16px 22px;
     background:linear-gradient(to top, var(--bg) 60%, transparent);
@@ -168,6 +202,7 @@
     box-shadow:0 12px 32px rgba(0,0,0,.25); transform:scale(.95); transition:transform .2s ease;
   }
   .confirm-overlay.show .confirm-box{ transform:scale(1); }
+  .confirm-box.review-box{ max-width:380px; max-height:82vh; overflow-y:auto; }
   .confirm-msg{ font-size:15px; font-weight:600; color:var(--navy); text-align:center; margin-bottom:18px; line-height:1.4; }
   .confirm-actions{ display:flex; gap:10px; }
   .confirm-actions button{
@@ -196,7 +231,7 @@ var BATAS_DATANG = "08:15";
 var BATAS_PULANG = "16:45";
 
 // manualIndex 0..7 = indikator item 3..10 (labels[2..9])
-var EXTRA_FIELDS = {"0": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "1": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan", "type": "text"}]}, "2": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "3": {"repeatable": false, "fields": [{"label": "Jumlah Faktur MKI", "type": "number"}, {"label": "Jumlah Faktur CFN", "type": "number"}]}, "6": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan Complaint", "type": "text"}]}, "7": {"repeatable": false, "fields": [{"label": "Waktu Pelaksanaan", "type": "select", "options": ["PAGI", "SORE"]}]}};
+var EXTRA_FIELDS = {"0": {"repeatable": true, "minRows": 3, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "1": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan", "type": "text"}]}, "2": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "No Handphone", "type": "tel"}, {"label": "Keterangan", "type": "text"}]}, "3": {"repeatable": false, "fields": [{"label": "Jumlah Faktur MKI", "type": "number"}, {"label": "Jumlah Faktur CFN", "type": "number"}]}, "4": {"repeatable": false, "fields": [{"label": "Metode Monitoring", "type": "select", "options": ["By Telp", "By WA"]}]}, "5": {"repeatable": false, "fields": [{"label": "Jumlah Customer yang Diinfokan", "type": "number"}, {"label": "Cara Infokan", "type": "select", "options": ["Menginfokan Resi Ekspedisi", "Menginfokan Siap Barang Handcarry", "Keduanya"]}]}, "6": {"repeatable": true, "fields": [{"label": "Nama Customer", "type": "text"}, {"label": "Keterangan Complaint", "type": "text"}]}, "7": {"repeatable": false, "fields": [{"label": "Waktu Pelaksanaan", "type": "select", "options": ["PAGI", "SORE"]}]}};
 var AUTO_LOCKED = [];
 var SKIP_EVIDENCE = false;
 var SHARED_PEER_IDX = []; // array of manualIndex yang nilainya bisa datang dari peer
@@ -230,6 +265,44 @@ function showConfirmDialog(message, onConfirm){
     + '<div class="confirm-actions">'
     +   '<button type="button" class="confirm-cancel">Batal</button>'
     +   '<button type="button" class="confirm-ok">Ya, Simpan</button>'
+    + '</div></div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){ overlay.classList.add("show"); });
+  function close(){
+    overlay.classList.remove("show");
+    setTimeout(function(){ overlay.remove(); }, 200);
+  }
+  overlay.querySelector(".confirm-cancel").addEventListener("click", close);
+  overlay.addEventListener("click", function(e){ if (e.target === overlay) close(); });
+  overlay.querySelector(".confirm-ok").addEventListener("click", function(){
+    close();
+    onConfirm();
+  });
+}
+
+function showReviewModal(manualLabels, tanggal, state, onConfirm){
+  var tglFmt = tanggal.split("-").reverse().join("/");
+  var rows = manualLabels.map(function(lbl, i){
+    var v = state.checklist[i];
+    var evi = state.evidence[i];
+    var row = '<div class="review-row' + (v && evi ? ' has-evi' : '') + '"><span>' + lbl + '</span>'
+      + '<span class="review-badge ' + (v ? "ok" : "no") + '">' + (v ? "YA" : "TIDAK") + '</span></div>';
+    if (v && evi) {
+      row += '<div class="review-evi">' + renderEvidenceView(evi) + '</div>';
+    }
+    return row;
+  }).join("");
+
+  var overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.innerHTML = '<div class="confirm-box review-box">'
+    + '<div class="confirm-msg">Review Kinerja Hari Ini</div>'
+    + '<div class="review-date">' + tglFmt + '</div>'
+    + '<div class="review-list">' + rows + '</div>'
+    + '<div class="confirm-msg small">Anda yakin untuk menginput kinerja hari ini?</div>'
+    + '<div class="confirm-actions">'
+    +   '<button type="button" class="confirm-cancel">Kembali</button>'
+    +   '<button type="button" class="confirm-ok">Ya, Simpan Kinerja</button>'
     + '</div></div>';
   document.body.appendChild(overlay);
   requestAnimationFrame(function(){ overlay.classList.add("show"); });
@@ -656,6 +729,13 @@ function renderDynamic(tanggal, status){
         var warnCfg = EXTRA_FIELDS[i] && EXTRA_FIELDS[i].warnIfEmpty;
         var warnFlag = warnCfg ? ' data-warn="1"' : '';
         var warnHtml = warnCfg ? ('<div class="warn-hint" id="warn-' + i + '" style="display:' + (v ? 'none' : 'flex') + '">⚠️ Sebaiknya diisi hari ini</div>') : '';
+        var groupDefX = EXTRA_FIELDS[i];
+        var progressBtnHtml = (groupDefX && groupDefX.repeatable) ? '<button type="button" class="save-progress-btn" data-idx="' + i + '">💾 Simpan Progress</button>' : '';
+        var actionsHtml = '<div class="indicator-actions" id="actions-' + i + '">'
+          + '<button type="button" class="confirm-ind-btn" data-idx="' + i + '">✓ Konfirmasi Data Ini</button>'
+          + progressBtnHtml
+          + '</div>'
+          + '<div class="indicator-locked-badge" id="locked-badge-' + i + '" style="display:none">✅ Data tersimpan <button type="button" class="edit-ind-btn" data-idx="' + i + '">Edit</button></div>';
         return '<div class="item"' + warnFlag + ' data-item-idx="' + i + '">'
           + '<div class="item-row-yn">'
           +   '<div class="txt"><span class="num">' + (i+3) + '</span>' + lbl + '</div>'
@@ -666,7 +746,7 @@ function renderDynamic(tanggal, status){
           +   '<input type="checkbox" class="chk-manual" data-idx="' + i + '"' + (v ? ' checked' : '') + ' style="display:none">'
           + '</div>'
           + warnHtml
-          + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + '</div>'
+          + '<div class="fields-wrap' + (v ? ' show' : '') + '" id="fields-' + i + '">' + fieldsHtml + actionsHtml + '</div>'
           + '</div>';
       }).join("")
     + '</div>';
@@ -720,6 +800,14 @@ function renderDynamic(tanggal, status){
     }
 
     wireFieldsValidation(i, chk, wrap);
+    wireIndicatorConfirm(i, chk, wrap);
+  });
+
+  area.querySelectorAll('.save-progress-btn').forEach(function(pbtn){
+    pbtn.addEventListener('click', function(){
+      doDraftSave();
+      showToast('Progress baris tersimpan ✓', 'okc');
+    });
   });
 
   area.querySelectorAll('.add-row-btn').forEach(function(btn2){
@@ -727,6 +815,47 @@ function renderDynamic(tanggal, status){
       addRow(parseInt(btn2.getAttribute('data-idx'), 10));
     });
   });
+
+  function setIndicatorLocked(i, wrap, isLocked){
+    var actions = document.getElementById('actions-' + i);
+    var badge = document.getElementById('locked-badge-' + i);
+    wrap.querySelectorAll('.field-input, .add-row-btn, .remove-row-btn, .save-progress-btn').forEach(function(el){
+      el.disabled = isLocked;
+      el.classList.toggle('locked-input', isLocked && el.classList.contains('field-input'));
+    });
+    if (actions) actions.style.display = isLocked ? 'none' : 'flex';
+    if (badge) badge.style.display = isLocked ? 'flex' : 'none';
+    wrap.dataset.confirmed = isLocked ? '1' : '0';
+  }
+
+  function wireIndicatorConfirm(i, chk, wrap){
+    var confirmBtn = wrap.querySelector('.confirm-ind-btn[data-idx="' + i + '"]');
+    var editBtn = wrap.querySelector('.edit-ind-btn[data-idx="' + i + '"]');
+    if (!confirmBtn) return;
+    confirmBtn.addEventListener('click', function(){
+      var result = collectFieldsValue(i);
+      var groupDef = EXTRA_FIELDS[i];
+      var minRows = (groupDef && groupDef.minRows) ? groupDef.minRows : 1;
+      if (!result.ok || result.count === 0) {
+        showToast('Lengkapi dulu isian sebelum konfirmasi', 'err');
+        return;
+      }
+      if (result.count < minRows) {
+        showToast('Minimal ' + minRows + ' data diperlukan (baru ' + result.count + ')', 'err');
+        return;
+      }
+      showConfirmDialog('Yakin data indikator ini sudah benar dan siap disimpan?', function(){
+        setIndicatorLocked(i, wrap, true);
+        doDraftSave();
+        showToast('Indikator tersimpan ✓', 'okc');
+      });
+    });
+    if (editBtn) {
+      editBtn.addEventListener('click', function(){
+        setIndicatorLocked(i, wrap, false);
+      });
+    }
+  }
 
   var elDatang = document.getElementById("f-datang");
   var elPulang = document.getElementById("f-pulang");
@@ -881,7 +1010,7 @@ function renderDynamic(tanggal, status){
     var evidence = state.evidence;
     var belowMinRowsLabels = state.belowMinRowsLabels;
 
-    showConfirmDialog("Anda yakin untuk menginput kinerja hari ini?", function(){
+    showReviewModal(manualLabels, tanggal2, state, function(){
       clearTimeout(draftTimer);
       suppressDraftSave = true;
 
