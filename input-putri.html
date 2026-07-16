@@ -159,6 +159,14 @@
     font-size:11px; font-weight:700; color:#1f7a43; background:#eafaf0;
     display:inline-block; border-radius:8px; padding:4px 10px; margin-top:6px;
   }
+  .row-card.row-new-highlight{
+    animation: rowNewPulse 1.1s ease;
+    border-radius:12px;
+  }
+  @keyframes rowNewPulse{
+    0%{ background:#eaf2ff; box-shadow:0 0 0 2px var(--blue); }
+    100%{ background:transparent; box-shadow:0 0 0 0 transparent; }
+  }
   .yn-btn:disabled{ opacity:.5; cursor:default; }
   .confirm-msg.small.warn-text{ color:var(--red); font-weight:700; text-align:center; }
 
@@ -640,8 +648,13 @@ function addRow(manualIdx){
   var rowEl = wrapper.firstChild;
   container.appendChild(rowEl);
   wireRowInputs(rowEl);
-  var firstInput = rowEl.querySelector('.field-input');
-  if (firstInput) firstInput.focus();
+  rowEl.classList.add('row-new-highlight');
+  setTimeout(function(){ rowEl.classList.remove('row-new-highlight'); }, 1200);
+  setTimeout(function(){
+    rowEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    var firstInput = rowEl.querySelector('.field-input');
+    if (firstInput) firstInput.focus({ preventScroll: true });
+  }, 50);
 }
 
 function wireFieldsValidation(manualIdx, chk, wrap){
