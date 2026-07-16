@@ -318,8 +318,9 @@ function initFilters(){
   var urlParams = new URLSearchParams(window.location.search);
   var lockedNama = urlParams.get("nama");
   var isPersonLocked = urlParams.get("lock") === "1" && lockedNama && PERSON_LIST.indexOf(lockedNama) !== -1;
+  var isMakassarLocked = urlParams.get("lock") === "1" && lockedNama === "MAKASSAR";
   var isTeamLocked = urlParams.get("lock") === "1" && lockedNama === "__OVERVIEW__";
-  IS_LOCKED_VIEW = isPersonLocked;
+  IS_LOCKED_VIEW = isPersonLocked || isMakassarLocked;
 
   if (isPersonLocked) {
     var o = document.createElement("option");
@@ -332,6 +333,17 @@ function initFilters(){
     if (title) title.textContent = "Kinerja Saya - " + lockedNama;
     var waBtn = document.getElementById("btn-wa-share-dash");
     if (waBtn) waBtn.style.display = "none";
+  } else if (isMakassarLocked) {
+    var oM = document.createElement("option");
+    oM.value = "MAKASSAR"; oM.textContent = "MAKASSAR (Rekap Cabang)";
+    sel.appendChild(oM);
+    sel.value = "MAKASSAR";
+    var fieldM = sel.closest(".field");
+    if (fieldM) fieldM.style.display = "none";
+    var titleM = document.querySelector(".topbar h1");
+    if (titleM) titleM.textContent = "Rekap Kinerja Cabang MAKASSAR";
+    var waBtnM = document.getElementById("btn-wa-share-dash");
+    if (waBtnM) waBtnM.style.display = "none";
   } else if (isTeamLocked) {
     var optOv = document.createElement("option");
     optOv.value = "__OVERVIEW__";
@@ -360,7 +372,7 @@ function initFilters(){
   document.getElementById("f-bulan").value = currentYearMonth();
 
   sel.addEventListener("change", function(){ load(); });
-  document.getElementById("f-bulan").addEventListener("change", function(){ load(); if (!isPersonLocked) setTimeout(prefetchAllPersons, 500); });
+  document.getElementById("f-bulan").addEventListener("change", function(){ load(); if (!isPersonLocked && !isMakassarLocked) setTimeout(prefetchAllPersons, 500); });
   document.getElementById("btn-refresh").addEventListener("click", function(){ load(true); });
 }
 
@@ -1301,7 +1313,7 @@ function currentViewCaption(){
     return { caption: "Rekap Kinerja Tim Makassar \u2013 " + bulanTxt + "\n" + BASE_SITE_URL + "rekap-kinerja-tim.html?nama=__OVERVIEW__&lock=1" };
   }
   if (nama === "MAKASSAR") {
-    return { caption: "Rekap Kinerja Cabang MAKASSAR - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar\n" + BASE_SITE_URL + "input-makassar.html" };
+    return { caption: "Rekap Kinerja Cabang MAKASSAR - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar\nDetail harian: " + BASE_SITE_URL + "rekap-kinerja-tim.html?nama=MAKASSAR&lock=1" };
   }
   return { caption: "Rekap Kinerja " + nama + " - " + bulanTxt + "\nPT. Mitra Kabel Indonesia - Cabang Makassar\nDetail harian: " + BASE_SITE_URL + "rekap-kinerja-tim.html?nama=" + nama + "&lock=1" };
 }
