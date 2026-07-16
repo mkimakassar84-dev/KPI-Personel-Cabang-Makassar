@@ -1035,6 +1035,14 @@ function renderDynamic(tanggal, status){
       var chk = document.querySelector('.chk-manual[data-idx="' + i + '"]');
       var wrap = document.getElementById('fields-' + i);
 
+      if (!chk && !wrap) {
+        // Indikator ini sudah dikonfirmasi & dikunci sebelumnya (tampil tanpa toggle/form) -
+        // pakai status yang sudah tersimpan di server, jangan coba baca elemen yang tidak ada.
+        checklist.push(status.values[i+2] === true);
+        evidence.push(status.evidence[i+2] || "");
+        return;
+      }
+
       if (!wrap) {
         checklist.push(chk.checked);
         evidence.push("");
